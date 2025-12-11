@@ -11,9 +11,14 @@ import DayPage from "./pages/DayPage";
 import Challenge from "./pages/Challenge";
 import Resources from "./pages/Resources";
 import Profile from "./pages/Profile";
-import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { AdminLayout } from "./components/layout/AdminLayout";
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AdminUsers } from "./pages/admin/AdminUsers";
+import { AdminChallenges } from "./pages/admin/AdminChallenges";
+import { ChallengeEditor } from "./pages/admin/ChallengeEditor";
+import { AdminSettings } from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +68,16 @@ const AppRoutes = () => (
     <Route path="/dia/:id" element={<ProtectedRoute><DayPage /></ProtectedRoute>} />
     <Route path="/recursos" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
     <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+    
+    {/* Admin routes with sidebar layout */}
+    <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+      <Route index element={<AdminDashboard />} />
+      <Route path="users" element={<AdminUsers />} />
+      <Route path="challenges" element={<AdminChallenges />} />
+      <Route path="challenges/:id" element={<ChallengeEditor />} />
+      <Route path="settings" element={<AdminSettings />} />
+    </Route>
+    
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
