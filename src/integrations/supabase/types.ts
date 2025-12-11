@@ -63,16 +63,20 @@ export type Database = {
       }
       days: {
         Row: {
+          challenge_details: string | null
           commitment: string | null
           concept: string | null
           concept_audio_url: string | null
           concept_title: string | null
           created_at: string | null
+          description: string | null
           emoji: string | null
+          expected_result: string | null
           id: number
           morning_audio_url: string | null
           morning_message: string | null
           next_day_preview: string | null
+          reflection_prompt: string | null
           reflection_questions: string[] | null
           subtitle: string
           task_steps: Json | null
@@ -82,16 +86,20 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          challenge_details?: string | null
           commitment?: string | null
           concept?: string | null
           concept_audio_url?: string | null
           concept_title?: string | null
           created_at?: string | null
+          description?: string | null
           emoji?: string | null
+          expected_result?: string | null
           id?: number
           morning_audio_url?: string | null
           morning_message?: string | null
           next_day_preview?: string | null
+          reflection_prompt?: string | null
           reflection_questions?: string[] | null
           subtitle: string
           task_steps?: Json | null
@@ -101,16 +109,20 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          challenge_details?: string | null
           commitment?: string | null
           concept?: string | null
           concept_audio_url?: string | null
           concept_title?: string | null
           created_at?: string | null
+          description?: string | null
           emoji?: string | null
+          expected_result?: string | null
           id?: number
           morning_audio_url?: string | null
           morning_message?: string | null
           next_day_preview?: string | null
+          reflection_prompt?: string | null
           reflection_questions?: string[] | null
           subtitle?: string
           task_steps?: Json | null
