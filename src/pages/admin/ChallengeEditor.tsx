@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Save, ArrowLeft, Plus, Trash2, Upload, Loader2, FileText, Mic, Headphones, ArrowUp, ArrowDown
+  Save, ArrowLeft, Plus, Trash2, Upload, Loader2, FileText, Mic, Headphones, ArrowUp, ArrowDown,
+  File, Download, X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,12 @@ import { toast } from '@/hooks/use-toast';
 interface TaskStep {
   id: string;
   text: string;
+}
+
+interface ResourceFile {
+  name: string;
+  url: string;
+  type: string;
 }
 
 interface DayData {
@@ -26,7 +33,7 @@ interface DayData {
   concept_audio_url: string | null;
   task_title: string | null;
   task_steps: TaskStep[];
-  tools: string[];
+  tools: ResourceFile[];
   reflection_questions: string[];
   commitment: string | null;
   next_day_preview: string | null;
@@ -62,10 +69,21 @@ export const ChallengeEditor = () => {
       return;
     }
 
+    // Parse tools - support both old string[] format and new ResourceFile[] format
+    let parsedTools: ResourceFile[] = [];
+    if (Array.isArray(data.tools)) {
+      parsedTools = data.tools.map((tool: any) => {
+        if (typeof tool === 'string') {
+          return { name: tool, url: '', type: 'text' };
+        }
+        return tool as ResourceFile;
+      });
+    }
+
     setDay({
       ...data,
       task_steps: Array.isArray(data.task_steps) ? (data.task_steps as unknown as TaskStep[]) : [],
-      tools: Array.isArray(data.tools) ? (data.tools as unknown as string[]) : [],
+      tools: parsedTools,
       reflection_questions: Array.isArray(data.reflection_questions) ? (data.reflection_questions as unknown as string[]) : [],
     });
     setLoading(false);
@@ -106,21 +124,74 @@ export const ChallengeEditor = () => {
     setDay({ ...day, task_steps: newTasks });
   };
 
-  const handleToolChange = (index: number, value: string) => {
+  const handleToolNameChange = (index: number, name: string) => {
     if (!day) return;
     const newTools = [...day.tools];
-    newTools[index] = value;
+    newTools[index] = { ...newTools[index], name };
     setDay({ ...day, tools: newTools });
   };
 
   const handleAddTool = () => {
     if (!day) return;
-    setDay({ ...day, tools: [...day.tools, 'Novo Material'] });
+    setDay({ ...day, tools: [...day.tools, { name: 'Novo Material', url: '', type: 'text' }] });
   };
 
   const handleDeleteTool = (index: number) => {
     if (!day) return;
     setDay({ ...day, tools: day.tools.filter((_, i) => i !== index) });
+  };
+
+  const handleToolFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    if (!event.target.files || !event.target.files[0] || !day) return;
+    const file = event.target.files[0];
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast({ title: 'Arquivo muito grande (máx 50MB)', variant: 'destructive' });
+      return;
+    }
+
+    setUploading(`tool-${index}`);
+    try {
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = `day-${day.id}/resources/${Date.now()}-${sanitizedName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('challenge-assets')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('challenge-assets')
+        .getPublicUrl(filePath);
+
+      const newTools = [...day.tools];
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const fileType = ['pdf'].includes(ext) ? 'pdf' : 
+                       ['xls', 'xlsx', 'csv'].includes(ext) ? 'spreadsheet' :
+                       ['doc', 'docx'].includes(ext) ? 'document' : 'file';
+      
+      newTools[index] = { 
+        name: newTools[index].name || file.name, 
+        url: publicUrl, 
+        type: fileType 
+      };
+      setDay({ ...day, tools: newTools });
+      
+      toast({ title: 'Arquivo enviado!' });
+    } catch (error: any) {
+      toast({ title: 'Erro no upload: ' + error.message, variant: 'destructive' });
+    } finally {
+      setUploading(null);
+      event.target.value = '';
+    }
+  };
+
+  const handleRemoveToolFile = (index: number) => {
+    if (!day) return;
+    const newTools = [...day.tools];
+    newTools[index] = { ...newTools[index], url: '', type: 'text' };
+    setDay({ ...day, tools: newTools });
   };
 
   const handleQuestionChange = (index: number, value: string) => {
@@ -191,7 +262,7 @@ export const ChallengeEditor = () => {
         concept_audio_url: day.concept_audio_url,
         task_title: day.task_title,
         task_steps: day.task_steps as any,
-        tools: day.tools,
+        tools: day.tools as any,
         reflection_questions: day.reflection_questions,
         commitment: day.commitment,
         next_day_preview: day.next_day_preview,
@@ -400,27 +471,92 @@ export const ChallengeEditor = () => {
 
         {/* Sidebar */}
         <div className="space-y-8">
-          {/* Tools */}
+          {/* Tools/Resources */}
           <section className="glass-card p-6 space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold">Materiais</h2>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <File size={18} className="text-primary" /> Materiais
+              </h2>
               <Button size="sm" variant="outline" onClick={handleAddTool}>
                 <Plus size={14} />
               </Button>
             </div>
-            <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Adicione PDFs, planilhas, documentos e outros arquivos para o dia.
+            </p>
+            <div className="space-y-3">
               {day.tools.map((tool, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={tool}
-                    onChange={(e) => handleToolChange(index, e.target.value)}
-                    className="flex-1"
-                  />
-                  <button onClick={() => handleDeleteTool(index)} className="p-2 text-destructive hover:bg-destructive/10 rounded">
-                    <Trash2 size={14} />
-                  </button>
+                <div key={index} className="bg-surface rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={tool.name}
+                      onChange={(e) => handleToolNameChange(index, e.target.value)}
+                      placeholder="Nome do material"
+                      className="flex-1"
+                    />
+                    <button 
+                      onClick={() => handleDeleteTool(index)} 
+                      className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                      title="Remover material"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  
+                  {tool.url ? (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className={`px-2 py-0.5 rounded font-medium ${
+                        tool.type === 'pdf' ? 'bg-red-500/20 text-red-400' :
+                        tool.type === 'spreadsheet' ? 'bg-green-500/20 text-green-400' :
+                        tool.type === 'document' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {tool.type.toUpperCase()}
+                      </span>
+                      <a 
+                        href={tool.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-1 truncate flex-1"
+                      >
+                        <Download size={12} /> Download
+                      </a>
+                      <button 
+                        onClick={() => handleRemoveToolFile(index)}
+                        className="p-1 text-muted-foreground hover:text-destructive"
+                        title="Remover arquivo"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer flex items-center justify-center gap-2 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 p-2 rounded border border-dashed border-primary/30 hover:border-primary/50 transition-colors">
+                      {uploading === `tool-${index}` ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" /> Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={14} /> Upload PDF, Planilha, Documento...
+                        </>
+                      )}
+                      <input 
+                        type="file" 
+                        accept=".pdf,.xls,.xlsx,.csv,.doc,.docx,.ppt,.pptx,.txt,.zip" 
+                        className="hidden" 
+                        onChange={(e) => handleToolFileUpload(e, index)} 
+                        disabled={uploading === `tool-${index}`}
+                      />
+                    </label>
+                  )}
                 </div>
               ))}
+              
+              {day.tools.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-4">
+                  Nenhum material adicionado.
+                </p>
+              )}
             </div>
           </section>
 

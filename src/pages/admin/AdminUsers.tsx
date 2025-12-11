@@ -121,22 +121,47 @@ export const AdminUsers = () => {
     
     const subscriptionStatus = newStatus === 'active' ? 'active' : 'canceled';
     
-    const { error } = await supabase
-      .from('subscriptions')
-      .upsert({
-        user_id: userId,
-        product_id: 'fire-challenge',
-        status: subscriptionStatus,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,product_id',
-      });
+    try {
+      // Check if subscription exists
+      const { data: existingSub } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('product_id', 'fire-challenge')
+        .maybeSingle();
 
-    if (error) {
-      toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
-    } else {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
-      toast({ title: `Usuário ${newStatus === 'active' ? 'ativado' : 'bloqueado'}!` });
+      let error;
+      if (existingSub) {
+        // Update existing subscription
+        const result = await supabase
+          .from('subscriptions')
+          .update({
+            status: subscriptionStatus,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingSub.id);
+        error = result.error;
+      } else {
+        // Insert new subscription
+        const result = await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: userId,
+            product_id: 'fire-challenge',
+            status: subscriptionStatus,
+          });
+        error = result.error;
+      }
+
+      if (error) {
+        console.error('Subscription error:', error);
+        toast({ title: 'Erro ao atualizar status', description: error.message, variant: 'destructive' });
+      } else {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+        toast({ title: `Usuário ${newStatus === 'active' ? 'ativado' : 'bloqueado'}!` });
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro ao atualizar status', description: err.message, variant: 'destructive' });
     }
     
     setActionLoading(null);
