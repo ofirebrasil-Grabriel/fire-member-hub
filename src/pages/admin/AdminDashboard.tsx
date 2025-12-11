@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Users, TrendingUp, Activity, BarChart3, Clock, Webhook, CheckCircle } from 'lucide-react';
+import { Users, TrendingUp, Activity, BarChart3, Clock, Webhook, CheckCircle, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface DashboardStats {
   totalMembers: number;
   newMembersLast30Days: number;
   activeUsers: number;
   avgCompletion: number;
+  completedChallenge: number;
 }
 
 interface ActivityItem {
@@ -19,25 +21,21 @@ interface ActivityItem {
   completed_at: string;
 }
 
-interface WebhookLog {
-  id: string;
-  source: string;
-  event: string;
-  payload: any;
-  received_at: string;
-  status_code: number | null;
+interface DailyEngagement {
+  date: string;
+  count: number;
 }
 
-interface EngagementStat {
-  date: string;
+interface DayCompletion {
+  day: number;
   count: number;
 }
 
 export const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
-  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
-  const [engagementStats, setEngagementStats] = useState<EngagementStat[]>([]);
+  const [dailyEngagement, setDailyEngagement] = useState<DailyEngagement[]>([]);
+  const [dayCompletion, setDayCompletion] = useState<DayCompletion[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -67,7 +65,13 @@ export const AdminDashboard = () => {
 
     const { data: completionData } = await supabase
       .from('day_progress')
-      .select('day_id')
+      .select('day_id, user_id')
+      .eq('completed', true);
+
+    const { count: completedChallenge } = await supabase
+      .from('day_progress')
+      .select('*', { count: 'exact', head: true })
+      .eq('day_id', 15)
       .eq('completed', true);
 
     const avgCompletion = totalMembers && totalMembers > 0
@@ -79,7 +83,20 @@ export const AdminDashboard = () => {
       newMembersLast30Days: newMembers || 0,
       activeUsers: activeUsers || 0,
       avgCompletion,
+      completedChallenge: completedChallenge || 0,
     });
+
+    // Fetch day completion distribution
+    const dayCompletionMap: Record<number, number> = {};
+    completionData?.forEach(d => {
+      dayCompletionMap[d.day_id] = (dayCompletionMap[d.day_id] || 0) + 1;
+    });
+    
+    const dayCompletionData: DayCompletion[] = Array.from({ length: 15 }, (_, i) => ({
+      day: i + 1,
+      count: dayCompletionMap[i + 1] || 0,
+    }));
+    setDayCompletion(dayCompletionData);
 
     // Fetch recent activity
     const { data: progressData } = await supabase
@@ -104,18 +121,8 @@ export const AdminDashboard = () => {
     }));
     setActivity(activityItems);
 
-    // Fetch webhook logs
-    const { data: logs } = await supabase
-      .from('webhook_logs')
-      .select('*')
-      .order('received_at', { ascending: false })
-      .limit(20);
-    setWebhookLogs(logs || []);
-
-    // Fetch engagement stats (last 14 days)
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-    const engagementData: EngagementStat[] = [];
-    
+    // Fetch daily engagement (last 14 days)
+    const engagementData: DailyEngagement[] = [];
     for (let i = 13; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split('T')[0];
@@ -132,7 +139,7 @@ export const AdminDashboard = () => {
         count: count || 0,
       });
     }
-    setEngagementStats(engagementData);
+    setDailyEngagement(engagementData);
 
     setLoading(false);
   };
@@ -145,13 +152,17 @@ export const AdminDashboard = () => {
     );
   }
 
-  const maxEngagement = Math.max(...engagementStats.map(e => e.count), 5);
-
   const cards = [
     { label: 'Membros Totais', value: stats.totalMembers, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
     { label: 'Novos (30d)', value: stats.newMembersLast30Days, icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
     { label: 'Ativos Hoje', value: stats.activeUsers, icon: Activity, color: 'text-fire', bg: 'bg-fire/10' },
     { label: 'Conclusão Média', value: `${stats.avgCompletion}%`, icon: BarChart3, color: 'text-warning', bg: 'bg-warning/10' },
+    { label: 'Completaram 15 dias', value: stats.completedChallenge, icon: CheckCircle, color: 'text-success', bg: 'bg-success/10' },
+  ];
+
+  const pieData = [
+    { name: 'Completaram', value: stats.completedChallenge, color: 'hsl(var(--success))' },
+    { name: 'Em progresso', value: stats.totalMembers - stats.completedChallenge, color: 'hsl(var(--muted))' },
   ];
 
   return (
@@ -168,97 +179,191 @@ export const AdminDashboard = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {cards.map((stat, index) => (
-          <div key={index} className="glass-card p-6 hover:scale-[1.02] transition-transform">
-            <div className="flex justify-between items-start mb-4">
-              <div className={cn('p-3 rounded-lg', stat.bg, stat.color)}>
-                <stat.icon size={24} />
-              </div>
+          <div key={index} className="glass-card p-5 hover:scale-[1.02] transition-transform">
+            <div className={cn('p-2.5 rounded-lg w-fit mb-3', stat.bg, stat.color)}>
+              <stat.icon size={20} />
             </div>
-            <h3 className={cn('text-2xl font-bold mb-1', stat.color)}>{stat.value}</h3>
-            <p className="text-muted-foreground text-sm">{stat.label}</p>
+            <h3 className={cn('text-2xl font-bold', stat.color)}>{stat.value}</h3>
+            <p className="text-muted-foreground text-xs mt-1">{stat.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Engagement Chart */}
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Engagement Line Chart */}
         <div className="lg:col-span-2 glass-card p-6">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <BarChart3 className="text-primary" size={20} />
-            Atividade (Últimos 14 dias)
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <Activity className="text-primary" size={20} />
+            Engajamento Diário (14 dias)
           </h2>
-          <div className="h-64 flex items-end justify-between gap-2 px-2">
-            {engagementStats.map((stat, i) => (
-              <div key={i} className="w-full relative group flex flex-col items-center gap-2">
-                <div className="absolute -top-8 bg-foreground text-background text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
-                  {stat.count} ações
-                </div>
-                <div
-                  className="w-full bg-gradient-fire rounded-t-sm hover:opacity-80 transition-opacity cursor-pointer"
-                  style={{ height: `${Math.max((stat.count / maxEngagement) * 100, 4)}%` }}
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dailyEngagement}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} 
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                 />
-                <span className="text-[10px] text-muted-foreground">{stat.date}</span>
+                <YAxis 
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} 
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--surface))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Completion Pie Chart */}
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <CheckCircle className="text-success" size={20} />
+            Taxa de Conclusão
+          </h2>
+          <div className="h-64 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--surface))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center gap-4 mt-2">
+            {pieData.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-muted-foreground">{item.name}: {item.value}</span>
               </div>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Quick Links */}
-        <div className="space-y-6">
-          <div className="glass-card p-6">
-            <h2 className="text-lg font-bold mb-4">Acesso Rápido</h2>
-            <div className="space-y-2">
-              <button
-                onClick={() => navigate('/admin/users')}
-                className="w-full text-left p-3 rounded-lg bg-surface hover:bg-surface-hover transition-colors flex items-center justify-between"
-              >
-                <span>Gerenciar Usuários</span>
-                <Users size={18} className="text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/challenges')}
-                className="w-full text-left p-3 rounded-lg bg-surface hover:bg-surface-hover transition-colors flex items-center justify-between"
-              >
-                <span>Editar Desafios</span>
-                <BarChart3 size={18} className="text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/settings')}
-                className="w-full text-left p-3 rounded-lg bg-surface hover:bg-surface-hover transition-colors flex items-center justify-between"
-              >
-                <span>Configurações</span>
-                <Activity size={18} className="text-muted-foreground" />
-              </button>
-            </div>
-          </div>
+      {/* Day Completion Bar Chart */}
+      <div className="glass-card p-6">
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <Calendar className="text-fire" size={20} />
+          Conclusões por Dia do Desafio
+        </h2>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dayCompletion}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis 
+                dataKey="day" 
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} 
+                axisLine={{ stroke: 'hsl(var(--border))' }}
+                tickFormatter={(val) => `D${val}`}
+              />
+              <YAxis 
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} 
+                axisLine={{ stroke: 'hsl(var(--border))' }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--surface))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                }}
+                labelFormatter={(val) => `Dia ${val}`}
+                formatter={(val: number) => [`${val} usuários`, 'Conclusões']}
+              />
+              <Bar 
+                dataKey="count" 
+                fill="url(#fireGradient)" 
+                radius={[4, 4, 0, 0]}
+              />
+              <defs>
+                <linearGradient id="fireGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--fire))" />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" />
+                </linearGradient>
+              </defs>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Activity & Logs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Activity */}
+      {/* Quick Links & Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Links */}
         <div className="glass-card p-6">
-          <h2 className="text-xl font-bold mb-4">Atividade Recente</h2>
+          <h2 className="text-lg font-bold mb-4">Acesso Rápido</h2>
+          <div className="space-y-2">
+            {[
+              { label: 'Gerenciar Usuários', to: '/admin/users', icon: Users },
+              { label: 'Editar Desafios', to: '/admin/challenges', icon: Calendar },
+              { label: 'Logs de Webhook', to: '/admin/webhooks', icon: Webhook },
+              { label: 'Configurações', to: '/admin/settings', icon: BarChart3 },
+            ].map((item, i) => (
+              <button
+                key={i}
+                onClick={() => navigate(item.to)}
+                className="w-full text-left p-3 rounded-lg bg-surface hover:bg-surface-hover transition-colors flex items-center justify-between group"
+              >
+                <span>{item.label}</span>
+                <item.icon size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="lg:col-span-2 glass-card p-6">
+          <h2 className="text-lg font-bold mb-4">Atividade Recente</h2>
           {activity.length > 0 ? (
             <div className="space-y-3">
               {activity.map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-surface hover:bg-surface-hover transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                    <div className="w-10 h-10 rounded-full bg-gradient-fire flex items-center justify-center text-white font-bold text-sm">
                       {item.user_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm">
-                        <span className="font-bold">{item.user_name}</span>
-                      </p>
+                      <p className="text-sm font-medium">{item.user_name}</p>
                       <p className="text-xs text-muted-foreground">{item.task_title}</p>
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <Clock size={12} />
-                    {new Date(item.completed_at).toLocaleDateString('pt-BR')}
+                    {item.completed_at ? new Date(item.completed_at).toLocaleDateString('pt-BR') : 'N/A'}
                   </div>
                 </div>
               ))}
@@ -268,51 +373,6 @@ export const AdminDashboard = () => {
               Nenhuma atividade recente.
             </div>
           )}
-        </div>
-
-        {/* Webhook Logs */}
-        <div className="glass-card p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Webhook size={20} className="text-primary" />
-            Logs de Integração
-          </h2>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {webhookLogs.length > 0 ? (
-              webhookLogs.map((log) => {
-                const payload = typeof log.payload === 'string' ? JSON.parse(log.payload) : log.payload;
-                const event = payload.event || 'UNKNOWN';
-                const email = payload.data?.buyer?.email || 'N/A';
-
-                return (
-                  <div key={log.id} className="bg-surface p-3 rounded-lg text-xs">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className={cn(
-                        'font-bold px-2 py-0.5 rounded',
-                        ['PURCHASE_APPROVED', 'PURCHASE_COMPLETE'].includes(event) 
-                          ? 'bg-success/20 text-success' 
-                          : ['CANCELED', 'REFUNDED'].includes(event)
-                          ? 'bg-destructive/20 text-destructive'
-                          : 'bg-primary/20 text-primary'
-                      )}>
-                        {event}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {new Date(log.received_at).toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-muted-foreground">Email: </span>
-                      <span>{email}</span>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum log encontrado.
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
