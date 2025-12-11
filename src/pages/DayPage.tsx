@@ -1,12 +1,12 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lightbulb, MessageSquare, Target } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lightbulb, MessageSquare, Target, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { TaskList } from '@/components/day/TaskList';
 import { MoodSelector } from '@/components/day/MoodSelector';
 import { DiaryEntry } from '@/components/day/DiaryEntry';
 import { ToolsList } from '@/components/day/ToolsList';
 import { AudioExpandableCard } from '@/components/day/AudioExpandableCard';
-import { challengeDays } from '@/data/challengeData';
+import { useDay, useDays } from '@/hooks/useDays';
 import { useUserProgress } from '@/contexts/UserProgressContext';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -18,18 +18,33 @@ const DayPage = () => {
   const dayId = parseInt(id || '1');
   const { progress, completeDay, canAccessDay } = useUserProgress();
   
-  const day = challengeDays.find(d => d.id === dayId);
+  const { day, loading, error } = useDay(dayId);
+  const { days } = useDays();
+  const totalDays = days.length || 15;
+  
   const dayProgress = progress.daysProgress[dayId];
   const isCompleted = dayProgress?.completed;
   const completedTasksCount = dayProgress?.completedTasks?.length || 0;
   const totalTasks = day?.taskSteps?.length || 0;
-  const allTasksCompleted = completedTasksCount === totalTasks;
+  const allTasksCompleted = totalTasks > 0 && completedTasksCount === totalTasks;
 
-  if (!day) {
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-2">Carregando conteúdo...</span>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !day) {
     return (
       <Layout>
         <div className="text-center py-20">
           <h1 className="text-2xl font-bold mb-4">Dia não encontrado</h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
           <Link to="/" className="text-primary hover:underline">
             Voltar ao Dashboard
           </Link>
@@ -59,7 +74,7 @@ const DayPage = () => {
   }
 
   const handleCompleteDay = () => {
-    if (!allTasksCompleted) {
+    if (totalTasks > 0 && !allTasksCompleted) {
       toast({
         title: "Complete todas as tarefas",
         description: "Você precisa completar todas as tarefas antes de finalizar o dia.",
@@ -74,7 +89,7 @@ const DayPage = () => {
       description: `Você completou o Dia ${dayId}! Continue assim!`,
     });
 
-    if (dayId < 15) {
+    if (dayId < totalDays) {
       setTimeout(() => navigate(`/dia/${dayId + 1}`), 1500);
     }
   };
@@ -94,13 +109,13 @@ const DayPage = () => {
           <div className="flex-1 text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <span className="text-3xl">{day.emoji}</span>
-              <span className="text-sm text-muted-foreground">Dia {dayId}/15</span>
+              <span className="text-sm text-muted-foreground">Dia {dayId}/{totalDays}</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold">{day.title}</h1>
             <p className="text-muted-foreground">{day.subtitle}</p>
           </div>
           
-          {dayId < 15 && canAccessDay(dayId + 1) ? (
+          {dayId < totalDays && canAccessDay(dayId + 1) ? (
             <Link 
               to={`/dia/${dayId + 1}`}
               className="p-2 rounded-lg bg-surface hover:bg-surface-hover transition-colors"
@@ -128,52 +143,60 @@ const DayPage = () => {
         )}
 
         {/* Morning Message - Audio Expandable */}
-        <AudioExpandableCard
-          title="Mensagem Matinal"
-          emoji="🌅"
-          iconBgClass="bg-primary/10"
-          text={day.morningMessage}
-          audioUrl={undefined} // TODO: Add audio URL from database
-        />
+        {day.morningMessage && (
+          <AudioExpandableCard
+            title="Mensagem Matinal"
+            emoji="🌅"
+            iconBgClass="bg-primary/10"
+            text={day.morningMessage}
+            audioUrl={day.morningAudioUrl || undefined}
+          />
+        )}
 
         {/* Concept - Audio Expandable */}
-        <AudioExpandableCard
-          title="Conceito FIRE do Dia"
-          subtitle={day.conceptTitle}
-          icon={<Lightbulb className="w-5 h-5 text-warning" />}
-          iconBgClass="bg-warning/10"
-          text={day.concept}
-          audioUrl={undefined} // TODO: Add audio URL from database
-        />
+        {day.concept && (
+          <AudioExpandableCard
+            title="Conceito FIRE do Dia"
+            subtitle={day.conceptTitle || undefined}
+            icon={<Lightbulb className="w-5 h-5 text-warning" />}
+            iconBgClass="bg-warning/10"
+            text={day.concept}
+            audioUrl={day.conceptAudioUrl || undefined}
+          />
+        )}
 
         {/* Tasks */}
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-fire flex items-center justify-center">
-                <Target className="w-5 h-5 text-white" />
+        {day.taskSteps.length > 0 && (
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-fire flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">Tarefas Práticas</h2>
+                  {day.taskTitle && <p className="text-sm text-muted-foreground">{day.taskTitle}</p>}
+                </div>
               </div>
-              <div>
-                <h2 className="font-semibold text-lg">Tarefas Práticas</h2>
-                <p className="text-sm text-muted-foreground">{day.taskTitle}</p>
+              <div className="text-right">
+                <span className={cn(
+                  "text-lg font-bold",
+                  allTasksCompleted ? "text-success" : "text-primary"
+                )}>
+                  {completedTasksCount}/{totalTasks}
+                </span>
+                <p className="text-xs text-muted-foreground">Completadas</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className={cn(
-                "text-lg font-bold",
-                allTasksCompleted ? "text-success" : "text-primary"
-              )}>
-                {completedTasksCount}/{totalTasks}
-              </span>
-              <p className="text-xs text-muted-foreground">Completadas</p>
-            </div>
+            
+            <TaskList dayId={dayId} tasks={day.taskSteps} />
           </div>
-          
-          <TaskList dayId={dayId} tasks={day.taskSteps} />
-        </div>
+        )}
 
         {/* Tools */}
-        <ToolsList tools={day.tools} />
+        {day.tools.length > 0 && (
+          <ToolsList tools={day.tools} />
+        )}
 
         {/* Mood & Diary */}
         <div className="grid md:grid-cols-2 gap-6">
@@ -182,41 +205,47 @@ const DayPage = () => {
         </div>
 
         {/* Reflection Questions */}
-        <div className="glass-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-primary" />
+        {day.reflectionQuestions.length > 0 && (
+          <div className="glass-card p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="font-semibold text-lg">Reflexão Guiada</h2>
             </div>
-            <h2 className="font-semibold text-lg">Reflexão Guiada</h2>
+            
+            <ul className="space-y-3">
+              {day.reflectionQuestions.map((question, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-surface flex items-center justify-center flex-shrink-0 text-sm text-muted-foreground">
+                    {index + 1}
+                  </span>
+                  <p className="text-muted-foreground">{question}</p>
+                </li>
+              ))}
+            </ul>
           </div>
-          
-          <ul className="space-y-3">
-            {day.reflectionQuestions.map((question, index) => (
-              <li key={index} className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-surface flex items-center justify-center flex-shrink-0 text-sm text-muted-foreground">
-                  {index + 1}
-                </span>
-                <p className="text-muted-foreground">{question}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
+        )}
 
         {/* Commitment & Next Day */}
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="glass-card p-6">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              🎯 Seu Compromisso Hoje
-            </h3>
-            <p className="text-muted-foreground text-sm">{day.commitment}</p>
-          </div>
+          {day.commitment && (
+            <div className="glass-card p-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                🎯 Seu Compromisso Hoje
+              </h3>
+              <p className="text-muted-foreground text-sm">{day.commitment}</p>
+            </div>
+          )}
           
-          <div className="glass-card p-6">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              ➡️ Amanhã
-            </h3>
-            <p className="text-muted-foreground text-sm">{day.nextDayPreview}</p>
-          </div>
+          {day.nextDayPreview && (
+            <div className="glass-card p-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                ➡️ Amanhã
+              </h3>
+              <p className="text-muted-foreground text-sm">{day.nextDayPreview}</p>
+            </div>
+          )}
         </div>
 
         {/* Complete Day Button */}
@@ -224,20 +253,20 @@ const DayPage = () => {
           <div className="text-center py-6">
             <Button
               onClick={handleCompleteDay}
-              disabled={!allTasksCompleted}
+              disabled={totalTasks > 0 && !allTasksCompleted}
               className={cn(
                 "btn-fire text-lg px-8 py-6",
-                !allTasksCompleted && "opacity-50 cursor-not-allowed"
+                totalTasks > 0 && !allTasksCompleted && "opacity-50 cursor-not-allowed"
               )}
             >
               <CheckCircle className="w-5 h-5 mr-2" />
-              {allTasksCompleted 
+              {totalTasks === 0 || allTasksCompleted 
                 ? `Completar Dia ${dayId}` 
                 : `Complete todas as ${totalTasks} tarefas`
               }
             </Button>
             
-            {!allTasksCompleted && (
+            {totalTasks > 0 && !allTasksCompleted && (
               <p className="text-sm text-muted-foreground mt-3">
                 {totalTasks - completedTasksCount} tarefa(s) restante(s)
               </p>

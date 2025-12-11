@@ -1,4 +1,5 @@
 import { useUserProgress } from '@/contexts/UserProgressContext';
+import { useDays } from '@/hooks/useDays';
 
 interface ProgressRingProps {
   size?: number;
@@ -6,9 +7,11 @@ interface ProgressRingProps {
 }
 
 export const ProgressRing = ({ size = 200, strokeWidth = 12 }: ProgressRingProps) => {
-  const { getProgressPercentage, getCompletedDaysCount } = useUserProgress();
-  const percentage = getProgressPercentage();
+  const { getCompletedDaysCount } = useUserProgress();
+  const { days } = useDays();
+  const totalDays = days.length || 15;
   const completedDays = getCompletedDaysCount();
+  const percentage = Math.round((completedDays / totalDays) * 100);
   
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -55,7 +58,7 @@ export const ProgressRing = ({ size = 200, strokeWidth = 12 }: ProgressRingProps
       <div className="absolute flex flex-col items-center justify-center">
         <span className="text-4xl font-bold text-fire">{percentage}%</span>
         <span className="text-sm text-muted-foreground mt-1">
-          {completedDays}/15 dias
+          {completedDays}/{totalDays} dias
         </span>
       </div>
     </div>

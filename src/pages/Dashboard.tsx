@@ -3,11 +3,14 @@ import { ProgressRing } from '@/components/dashboard/ProgressRing';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { DayCard } from '@/components/dashboard/DayCard';
-import { challengeDays } from '@/data/challengeData';
+import { useDays } from '@/hooks/useDays';
 import { useUserProgress } from '@/contexts/UserProgressContext';
+import { Loader2 } from 'lucide-react';
 
 const Dashboard = () => {
   const { progress } = useUserProgress();
+  const { days, loading } = useDays();
+  const totalDays = days.length || 15;
 
   return (
     <Layout>
@@ -33,7 +36,7 @@ const Dashboard = () => {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Meta</span>
-                  <span className="font-semibold">15 dias</span>
+                  <span className="font-semibold">{totalDays} dias</span>
                 </div>
               </div>
               
@@ -47,18 +50,29 @@ const Dashboard = () => {
           
           {/* Days List */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-semibold text-lg">Jornada de 15 Dias</h3>
-            <div className="space-y-3">
-              {challengeDays.map((day, index) => (
-                <div 
-                  key={day.id} 
-                  className="animate-fade-up"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <DayCard day={day} />
-                </div>
-              ))}
-            </div>
+            <h3 className="font-semibold text-lg">Jornada de {totalDays} Dias</h3>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Carregando...</span>
+              </div>
+            ) : days.length === 0 ? (
+              <div className="glass-card p-6 text-center">
+                <p className="text-muted-foreground">Nenhum dia cadastrado ainda.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {days.map((day, index) => (
+                  <div 
+                    key={day.id} 
+                    className="animate-fade-up"
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    <DayCard day={day} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

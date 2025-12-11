@@ -1,11 +1,12 @@
-import { Flame, ArrowRight } from 'lucide-react';
+import { Flame, ArrowRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useUserProgress } from '@/contexts/UserProgressContext';
-import { challengeDays } from '@/data/challengeData';
+import { useDays } from '@/hooks/useDays';
 
 export const WelcomeCard = () => {
   const { progress } = useUserProgress();
-  const currentDay = challengeDays.find(d => d.id === progress.currentDay) || challengeDays[0];
+  const { days, loading } = useDays();
+  const currentDay = days.find(d => d.id === progress.currentDay) || days[0];
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -16,10 +17,11 @@ export const WelcomeCard = () => {
 
   const getMotivationalMessage = () => {
     const completedDays = Object.values(progress.daysProgress).filter(d => d.completed).length;
+    const totalDays = days.length || 15;
     if (completedDays === 0) return 'Pronto para transformar sua vida financeira?';
     if (completedDays < 5) return 'Você está no caminho certo! Continue assim!';
     if (completedDays < 10) return 'Incrível progresso! Metade do caminho já foi percorrida.';
-    if (completedDays < 15) return 'A reta final chegou! A liberdade financeira está próxima.';
+    if (completedDays < totalDays) return 'A reta final chegou! A liberdade financeira está próxima.';
     return 'Parabéns! Você completou o desafio! 🎉';
   };
 
@@ -48,21 +50,32 @@ export const WelcomeCard = () => {
 
         {/* Current Day Preview */}
         <div className="mt-6 p-4 bg-surface/50 rounded-xl border border-border/50">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-2xl">{currentDay.emoji}</span>
-            <div>
-              <h3 className="font-semibold">{currentDay.title}</h3>
-              <p className="text-sm text-muted-foreground">{currentDay.subtitle}</p>
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <span className="text-muted-foreground">Carregando...</span>
             </div>
-          </div>
-          
-          <Link 
-            to={`/dia/${currentDay.id}`}
-            className="inline-flex items-center gap-2 btn-fire text-sm mt-2"
-          >
-            Continuar Desafio
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+          ) : currentDay ? (
+            <>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-2xl">{currentDay.emoji}</span>
+                <div>
+                  <h3 className="font-semibold">{currentDay.title}</h3>
+                  <p className="text-sm text-muted-foreground">{currentDay.subtitle}</p>
+                </div>
+              </div>
+              
+              <Link 
+                to={`/dia/${currentDay.id}`}
+                className="inline-flex items-center gap-2 btn-fire text-sm mt-2"
+              >
+                Continuar Desafio
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </>
+          ) : (
+            <p className="text-muted-foreground">Nenhum dia disponível ainda.</p>
+          )}
         </div>
       </div>
     </div>
