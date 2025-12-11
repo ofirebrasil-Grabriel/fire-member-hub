@@ -64,9 +64,9 @@ export const ChallengeEditor = () => {
 
     setDay({
       ...data,
-      task_steps: Array.isArray(data.task_steps) ? data.task_steps as TaskStep[] : [],
-      tools: Array.isArray(data.tools) ? data.tools as string[] : [],
-      reflection_questions: Array.isArray(data.reflection_questions) ? data.reflection_questions as string[] : [],
+      task_steps: Array.isArray(data.task_steps) ? (data.task_steps as unknown as TaskStep[]) : [],
+      tools: Array.isArray(data.tools) ? (data.tools as unknown as string[]) : [],
+      reflection_questions: Array.isArray(data.reflection_questions) ? (data.reflection_questions as unknown as string[]) : [],
     });
     setLoading(false);
   };
