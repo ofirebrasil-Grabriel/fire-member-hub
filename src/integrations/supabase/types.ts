@@ -61,6 +61,66 @@ export type Database = {
           },
         ]
       }
+      days: {
+        Row: {
+          commitment: string | null
+          concept: string | null
+          concept_audio_url: string | null
+          concept_title: string | null
+          created_at: string | null
+          emoji: string | null
+          id: number
+          morning_audio_url: string | null
+          morning_message: string | null
+          next_day_preview: string | null
+          reflection_questions: string[] | null
+          subtitle: string
+          task_steps: Json | null
+          task_title: string | null
+          title: string
+          tools: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          commitment?: string | null
+          concept?: string | null
+          concept_audio_url?: string | null
+          concept_title?: string | null
+          created_at?: string | null
+          emoji?: string | null
+          id?: number
+          morning_audio_url?: string | null
+          morning_message?: string | null
+          next_day_preview?: string | null
+          reflection_questions?: string[] | null
+          subtitle: string
+          task_steps?: Json | null
+          task_title?: string | null
+          title: string
+          tools?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          commitment?: string | null
+          concept?: string | null
+          concept_audio_url?: string | null
+          concept_title?: string | null
+          created_at?: string | null
+          emoji?: string | null
+          id?: number
+          morning_audio_url?: string | null
+          morning_message?: string | null
+          next_day_preview?: string | null
+          reflection_questions?: string[] | null
+          subtitle?: string
+          task_steps?: Json | null
+          task_title?: string | null
+          title?: string
+          tools?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
