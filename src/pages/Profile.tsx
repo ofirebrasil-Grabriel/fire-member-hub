@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useUserProgress } from '@/contexts/UserProgressContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   User, 
   Mail, 
@@ -13,23 +16,66 @@ import {
   Palette,
   RefreshCw,
   Save,
-  LogOut
+  LogOut,
+  Contrast
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const Profile = () => {
   const { progress, setUserName, resetProgress } = useUserProgress();
+  const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  
   const [name, setName] = useState(progress.userName);
-  const [email, setEmail] = useState('');
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
+  const [email, setEmail] = useState(user?.email || '');
+  const [notifications, setNotifications] = useState(() => {
+    return localStorage.getItem('fire-notifications') !== 'false';
+  });
+  const [subscription, setSubscription] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = () => {
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setSubscription(data);
+      setLoading(false);
+    };
+
+    fetchSubscription();
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem('fire-notifications', notifications.toString());
+  }, [notifications]);
+
+  const handleSave = async () => {
     setUserName(name);
+    
+    if (user) {
+      await supabase
+        .from('profiles')
+        .update({ full_name: name })
+        .eq('id', user.id);
+    }
+    
     toast({
       title: "Perfil atualizado!",
       description: "Suas informações foram salvas com sucesso.",
@@ -45,6 +91,51 @@ const Profile = () => {
       });
     }
   };
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({
+      title: "Até logo!",
+      description: "Você foi desconectado com sucesso.",
+    });
+  };
+
+  const getStatusInfo = () => {
+    if (!subscription) {
+      return {
+        label: 'Sem assinatura',
+        color: 'bg-muted text-muted-foreground',
+        description: 'Você não possui uma assinatura ativa.',
+      };
+    }
+
+    const statusMap: Record<string, any> = {
+      active: {
+        label: 'Acesso Ativo',
+        color: 'bg-success/10 border-success/30 text-success',
+        description: `Iniciado em ${new Date(subscription.started_at).toLocaleDateString('pt-BR')}`,
+      },
+      canceled: {
+        label: 'Cancelado',
+        color: 'bg-destructive/10 border-destructive/30 text-destructive',
+        description: 'Sua assinatura foi cancelada.',
+      },
+      overdue: {
+        label: 'Pagamento Pendente',
+        color: 'bg-warning/10 border-warning/30 text-warning',
+        description: 'Existe um pagamento pendente.',
+      },
+      refunded: {
+        label: 'Reembolsado',
+        color: 'bg-muted text-muted-foreground',
+        description: 'Sua compra foi reembolsada.',
+      },
+    };
+
+    return statusMap[subscription.status] || statusMap.canceled;
+  };
+
+  const statusInfo = getStatusInfo();
 
   return (
     <Layout>
@@ -94,12 +185,14 @@ const Profile = () => {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-surface border-border"
-                  placeholder="seu@email.com"
+                  disabled
+                  className="pl-10 bg-surface border-border opacity-70"
                   type="email"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                O email não pode ser alterado
+              </p>
             </div>
 
             <Button onClick={handleSave} className="w-full btn-fire">
@@ -121,21 +214,23 @@ const Profile = () => {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-success/10 border border-success/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-success">Acesso Ativo</p>
-                <p className="text-sm text-muted-foreground">
-                  Iniciado em {new Date(progress.startedAt).toLocaleDateString('pt-BR')}
-                </p>
+          {loading ? (
+            <div className="p-4 rounded-xl bg-surface animate-pulse h-20" />
+          ) : (
+            <div className={cn('p-4 rounded-xl border', statusInfo.color)}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{statusInfo.label}</p>
+                  <p className="text-sm opacity-80">
+                    {statusInfo.description}
+                  </p>
+                </div>
+                {subscription?.status === 'active' && (
+                  <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
+                )}
               </div>
-              <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
             </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground mt-4 text-center">
-            Integração com Hotmart será configurada após conectar o backend
-          </p>
+          )}
         </div>
 
         {/* Preferences */}
@@ -159,15 +254,51 @@ const Profile = () => {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Moon className="w-5 h-5 text-muted-foreground" />
+                <Palette className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <p className="font-medium">Modo Escuro</p>
-                  <p className="text-sm text-muted-foreground">Tema escuro ativado</p>
+                  <p className="font-medium">Tema</p>
+                  <p className="text-sm text-muted-foreground">Escolha o visual da plataforma</p>
                 </div>
               </div>
-              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+              <Select value={theme} onValueChange={(value: any) => setTheme(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dark">
+                    <div className="flex items-center gap-2">
+                      <Moon className="w-4 h-4" />
+                      Escuro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="light">
+                    <div className="flex items-center gap-2">
+                      <Sun className="w-4 h-4" />
+                      Claro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="high-contrast">
+                    <div className="flex items-center gap-2">
+                      <Contrast className="w-4 h-4" />
+                      Alto Contraste
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </div>
+
+        {/* Logout */}
+        <div className="glass-card p-6">
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+            className="w-full"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sair da conta
+          </Button>
         </div>
 
         {/* Danger Zone */}

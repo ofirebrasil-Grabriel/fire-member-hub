@@ -5,6 +5,7 @@ import { TaskList } from '@/components/day/TaskList';
 import { MoodSelector } from '@/components/day/MoodSelector';
 import { DiaryEntry } from '@/components/day/DiaryEntry';
 import { ToolsList } from '@/components/day/ToolsList';
+import { AudioExpandableCard } from '@/components/day/AudioExpandableCard';
 import { challengeDays } from '@/data/challengeData';
 import { useUserProgress } from '@/contexts/UserProgressContext';
 import { Button } from '@/components/ui/button';
@@ -126,30 +127,24 @@ const DayPage = () => {
           </div>
         )}
 
-        {/* Morning Message */}
-        <div className="glass-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <span className="text-xl">🌅</span>
-            </div>
-            <h2 className="font-semibold text-lg">Mensagem Matinal</h2>
-          </div>
-          <p className="text-muted-foreground leading-relaxed">{day.morningMessage}</p>
-        </div>
+        {/* Morning Message - Audio Expandable */}
+        <AudioExpandableCard
+          title="Mensagem Matinal"
+          emoji="🌅"
+          iconBgClass="bg-primary/10"
+          text={day.morningMessage}
+          audioUrl={undefined} // TODO: Add audio URL from database
+        />
 
-        {/* Concept */}
-        <div className="glass-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
-              <Lightbulb className="w-5 h-5 text-warning" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-lg">Conceito FIRE do Dia</h2>
-              <p className="text-sm text-muted-foreground">{day.conceptTitle}</p>
-            </div>
-          </div>
-          <p className="text-muted-foreground leading-relaxed">{day.concept}</p>
-        </div>
+        {/* Concept - Audio Expandable */}
+        <AudioExpandableCard
+          title="Conceito FIRE do Dia"
+          subtitle={day.conceptTitle}
+          icon={<Lightbulb className="w-5 h-5 text-warning" />}
+          iconBgClass="bg-warning/10"
+          text={day.concept}
+          audioUrl={undefined} // TODO: Add audio URL from database
+        />
 
         {/* Tasks */}
         <div className="glass-card p-6">
