@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { useAdmin } from '@/hooks/useAdmin';
+import { useAdmin, DayContent } from '@/hooks/useAdmin';
 import { 
   Users, 
   Calendar, 
@@ -8,21 +8,22 @@ import {
   Webhook,
   BarChart3,
   Search,
-  MoreVertical,
   Edit,
   Trash,
-  Eye,
   Shield,
   RefreshCw,
   Copy,
   Check,
   AlertTriangle,
   Save,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  X
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Select, 
   SelectContent, 
@@ -50,20 +51,38 @@ const Admin = () => {
     webhookLogs, 
     settings, 
     stats,
+    days,
+    createUser,
+    updateUser,
     updateUserStatus,
     updateSetting,
+    createSetting,
+    deleteSetting,
     deleteUser,
+    createDay,
+    updateDay,
+    deleteDay,
     refetch 
   } = useAdmin();
 
   const [searchUsers, setSearchUsers] = useState('');
   const [selectedTab, setSelectedTab] = useState('users');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  
+  // User dialogs
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [newUserDialog, setNewUserDialog] = useState(false);
+  const [newUserData, setNewUserData] = useState({ email: '', password: '', full_name: '' });
+  
+  // Day dialogs
+  const [editingDay, setEditingDay] = useState<DayContent | null>(null);
+  const [newDayDialog, setNewDayDialog] = useState(false);
+  
+  // Setting dialogs
   const [editingSetting, setEditingSetting] = useState<any>(null);
-  const [newSettingValue, setNewSettingValue] = useState('');
+  const [newSettingDialog, setNewSettingDialog] = useState(false);
+  const [newSettingData, setNewSettingData] = useState({ key: '', value: '', description: '' });
 
-  // Show loading
   if (loading) {
     return (
       <Layout>
@@ -74,7 +93,6 @@ const Admin = () => {
     );
   }
 
-  // Redirect non-admins
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
@@ -112,20 +130,46 @@ const Admin = () => {
     setTimeout(() => setCopiedUrl(null), 2000);
   };
 
-  const handleUpdateUserStatus = async (userId: string, status: string) => {
-    const success = await updateUserStatus(userId, status);
+  // User handlers
+  const handleCreateUser = async () => {
+    if (!newUserData.email || !newUserData.password) {
+      toast({ title: 'Preencha email e senha', variant: 'destructive' });
+      return;
+    }
+    const success = await createUser(newUserData.email, newUserData.password, newUserData.full_name || 'Participante');
     if (success) {
-      toast({ title: 'Status atualizado!' });
+      toast({ title: 'Usuário criado!' });
+      setNewUserDialog(false);
+      setNewUserData({ email: '', password: '', full_name: '' });
+    } else {
+      toast({ title: 'Erro ao criar usuário', variant: 'destructive' });
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    const success = await updateUser(editingUser.id, { 
+      full_name: editingUser.full_name 
+    });
+    if (success) {
+      toast({ title: 'Usuário atualizado!' });
       setEditingUser(null);
     } else {
       toast({ title: 'Erro ao atualizar', variant: 'destructive' });
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
-      return;
+  const handleUpdateUserStatus = async (userId: string, status: string) => {
+    const success = await updateUserStatus(userId, status);
+    if (success) {
+      toast({ title: 'Status atualizado!' });
+    } else {
+      toast({ title: 'Erro ao atualizar', variant: 'destructive' });
     }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
     const success = await deleteUser(userId);
     if (success) {
       toast({ title: 'Usuário excluído!' });
@@ -134,27 +178,92 @@ const Admin = () => {
     }
   };
 
+  // Day handlers
+  const handleSaveDay = async () => {
+    if (!editingDay) return;
+    const success = await updateDay(editingDay.id, editingDay);
+    if (success) {
+      toast({ title: 'Dia atualizado!' });
+      setEditingDay(null);
+    } else {
+      toast({ title: 'Erro ao atualizar', variant: 'destructive' });
+    }
+  };
+
+  const handleCreateDay = async () => {
+    const newId = days.length > 0 ? Math.max(...days.map(d => d.id)) + 1 : 1;
+    const success = await createDay({
+      id: newId,
+      title: `Dia ${newId}`,
+      subtitle: 'Novo dia do desafio',
+      emoji: '📅',
+      morning_message: '',
+      concept: '',
+      concept_title: '',
+      task_title: '',
+      task_steps: [],
+      tools: [],
+      reflection_questions: [],
+      commitment: '',
+      next_day_preview: '',
+    });
+    if (success) {
+      toast({ title: 'Dia criado!' });
+      setNewDayDialog(false);
+    } else {
+      toast({ title: 'Erro ao criar', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteDay = async (dayId: number) => {
+    if (!confirm('Tem certeza que deseja excluir este dia?')) return;
+    const success = await deleteDay(dayId);
+    if (success) {
+      toast({ title: 'Dia excluído!' });
+    } else {
+      toast({ title: 'Erro ao excluir', variant: 'destructive' });
+    }
+  };
+
+  // Setting handlers
   const handleSaveSetting = async () => {
     if (!editingSetting) return;
-    
-    let value = newSettingValue;
+    let value = editingSetting.value;
     try {
-      value = JSON.parse(newSettingValue);
-    } catch {
-      // Keep as string if not valid JSON
-    }
+      value = JSON.parse(editingSetting.value);
+    } catch {}
     
     const success = await updateSetting(editingSetting.key, value);
     if (success) {
       toast({ title: 'Configuração salva!' });
       setEditingSetting(null);
-      setNewSettingValue('');
     } else {
       toast({ title: 'Erro ao salvar', variant: 'destructive' });
     }
   };
 
+  const handleCreateSetting = async () => {
+    if (!newSettingData.key) {
+      toast({ title: 'Preencha a chave', variant: 'destructive' });
+      return;
+    }
+    let value = newSettingData.value;
+    try {
+      value = JSON.parse(newSettingData.value);
+    } catch {}
+    
+    const success = await createSetting(newSettingData.key, value, newSettingData.description);
+    if (success) {
+      toast({ title: 'Configuração criada!' });
+      setNewSettingDialog(false);
+      setNewSettingData({ key: '', value: '', description: '' });
+    } else {
+      toast({ title: 'Erro ao criar', variant: 'destructive' });
+    }
+  };
+
   const hotmartWebhookUrl = `https://gvjvygukvupjxadevduj.supabase.co/functions/v1/hotmart-webhook`;
+  const n8nWebhookUrl = `https://gvjvygukvupjxadevduj.supabase.co/functions/v1/n8n-webhook`;
 
   return (
     <Layout>
@@ -199,6 +308,10 @@ const Admin = () => {
               <Users className="w-4 h-4 mr-2" />
               Usuários
             </TabsTrigger>
+            <TabsTrigger value="content" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+              <Calendar className="w-4 h-4 mr-2" />
+              Conteúdo
+            </TabsTrigger>
             <TabsTrigger value="webhooks" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
               <Webhook className="w-4 h-4 mr-2" />
               Webhooks
@@ -221,6 +334,10 @@ const Admin = () => {
                   className="pl-10 bg-surface border-border"
                 />
               </div>
+              <Button onClick={() => setNewUserDialog(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Usuário
+              </Button>
             </div>
 
             {users.length === 0 ? (
@@ -250,7 +367,22 @@ const Admin = () => {
                               <p className="text-sm text-muted-foreground">{user.email}</p>
                             </div>
                           </td>
-                          <td className="p-4">{getStatusBadge(user.subscription_status)}</td>
+                          <td className="p-4">
+                            <Select 
+                              value={user.subscription_status || 'none'} 
+                              onValueChange={(value) => handleUpdateUserStatus(user.id, value)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Ativo</SelectItem>
+                                <SelectItem value="canceled">Cancelado</SelectItem>
+                                <SelectItem value="overdue">Vencido</SelectItem>
+                                <SelectItem value="refunded">Reembolsado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-20 bg-surface rounded-full overflow-hidden">
@@ -270,7 +402,7 @@ const Admin = () => {
                           <td className="p-4">
                             <div className="flex items-center justify-end gap-2">
                               <button 
-                                onClick={() => setEditingUser(user)}
+                                onClick={() => setEditingUser({...user})}
                                 className="p-2 rounded-lg hover:bg-surface transition-colors"
                               >
                                 <Edit className="w-4 h-4 text-muted-foreground" />
@@ -290,6 +422,39 @@ const Admin = () => {
                 </div>
               </div>
             )}
+          </TabsContent>
+
+          {/* Content Tab */}
+          <TabsContent value="content" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Dias do Desafio ({days.length})</h3>
+              <Button onClick={() => setNewDayDialog(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Dia
+              </Button>
+            </div>
+
+            <div className="grid gap-4">
+              {days.map((day) => (
+                <div key={day.id} className="glass-card p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl">{day.emoji}</span>
+                    <div>
+                      <p className="font-semibold">Dia {day.id}: {day.title}</p>
+                      <p className="text-sm text-muted-foreground">{day.subtitle}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setEditingDay({...day})}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteDay(day.id)}>
+                      <Trash className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </TabsContent>
 
           {/* Webhooks Tab */}
@@ -319,10 +484,12 @@ const Admin = () => {
                       </button>
                     </div>
                   </div>
-                  <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
-                    <p className="text-sm text-warning flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      Configure esta URL na Hotmart em Ferramentas → Webhooks
+                  <div className="p-3 rounded-lg bg-success/10 border border-success/30">
+                    <p className="text-sm text-success">
+                      ✓ Cria usuário automaticamente em compras aprovadas
+                    </p>
+                    <p className="text-sm text-success">
+                      ✓ Bloqueia acesso em cancelamentos/reembolsos
                     </p>
                   </div>
                   <a 
@@ -332,22 +499,34 @@ const Admin = () => {
                     className="btn-fire text-sm inline-flex items-center gap-2"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    Abrir Hotmart
+                    Configurar na Hotmart
                   </a>
                 </div>
               </div>
 
               <div className="glass-card p-6">
-                <h3 className="font-semibold mb-4">n8n Workflows</h3>
+                <h3 className="font-semibold mb-4">n8n Webhook</h3>
                 <div className="space-y-3">
                   <div className="p-3 rounded-lg bg-surface/50">
-                    <p className="text-xs text-muted-foreground mb-1">Workflow URL</p>
-                    <p className="text-sm text-muted-foreground">
-                      Configure nas configurações abaixo
-                    </p>
+                    <p className="text-xs text-muted-foreground mb-1">URL do Webhook</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-sm text-primary break-all flex-1">
+                        {n8nWebhookUrl}
+                      </code>
+                      <button
+                        onClick={() => copyToClipboard(n8nWebhookUrl)}
+                        className="p-2 rounded-lg hover:bg-surface transition-colors"
+                      >
+                        {copiedUrl === n8nWebhookUrl ? (
+                          <Check className="w-4 h-4 text-success" />
+                        ) : (
+                          <Copy className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Configure os workflows para automações de e-mail e CRM.
+                    Eventos disponíveis: send_welcome_email, send_milestone_email, get_user_progress, get_milestone_users
                   </p>
                 </div>
               </div>
@@ -408,102 +587,227 @@ const Admin = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
-            <div className="glass-card overflow-hidden">
-              <div className="p-4 border-b border-border">
-                <h3 className="font-semibold">Configurações do Sistema</h3>
-              </div>
-              <div className="divide-y divide-border">
-                {settings.map((setting) => (
-                  <div key={setting.id} className="p-4 flex items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <p className="font-medium">{setting.key}</p>
-                      <p className="text-sm text-muted-foreground">{setting.description}</p>
-                      <code className="text-xs text-primary mt-1 block break-all">
-                        {typeof setting.value === 'string' ? setting.value : JSON.stringify(setting.value)}
-                      </code>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingSetting(setting);
-                        setNewSettingValue(
-                          typeof setting.value === 'string' 
-                            ? setting.value 
-                            : JSON.stringify(setting.value)
-                        );
-                      }}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Configurações do Sistema</h3>
+              <Button onClick={() => setNewSettingDialog(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Nova Configuração
+              </Button>
             </div>
-
-            {/* How access works */}
-            <div className="glass-card p-6">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Como funciona o acesso
-              </h3>
-              <div className="space-y-4 text-sm text-muted-foreground">
-                <p>
-                  <strong className="text-foreground">1. Compra na Hotmart:</strong> Quando um cliente compra o produto, 
-                  a Hotmart envia um webhook para nossa URL.
-                </p>
-                <p>
-                  <strong className="text-foreground">2. Criação de conta:</strong> O sistema cria automaticamente uma 
-                  conta para o cliente com o email da compra.
-                </p>
-                <p>
-                  <strong className="text-foreground">3. Email de boas-vindas:</strong> O cliente recebe um email com 
-                  link para definir sua senha (configure no n8n).
-                </p>
-                <p>
-                  <strong className="text-foreground">4. Cancelamento/Reembolso:</strong> Se houver cancelamento ou 
-                  reembolso, o acesso é automaticamente revogado.
-                </p>
-              </div>
+            
+            <div className="glass-card overflow-hidden">
+              {settings.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Nenhuma configuração encontrada</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {settings.map((setting) => (
+                    <div key={setting.id} className="p-4 flex items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="font-medium">{setting.key}</p>
+                        <p className="text-sm text-muted-foreground">{setting.description}</p>
+                        <code className="text-xs text-primary mt-1 block break-all">
+                          {typeof setting.value === 'string' ? setting.value : JSON.stringify(setting.value)}
+                        </code>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditingSetting({
+                            ...setting,
+                            value: typeof setting.value === 'string' ? setting.value : JSON.stringify(setting.value)
+                          })}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={async () => {
+                            if (confirm('Excluir esta configuração?')) {
+                              await deleteSetting(setting.key);
+                              toast({ title: 'Configuração excluída!' });
+                            }
+                          }}
+                        >
+                          <Trash className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* New User Dialog */}
+      <Dialog open={newUserDialog} onOpenChange={setNewUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Novo Usuário</DialogTitle>
+            <DialogDescription>Adicione um novo usuário ao sistema</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Email"
+              value={newUserData.email}
+              onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+            />
+            <Input
+              placeholder="Senha"
+              type="password"
+              value={newUserData.password}
+              onChange={(e) => setNewUserData({...newUserData, password: e.target.value})}
+            />
+            <Input
+              placeholder="Nome completo"
+              value={newUserData.full_name}
+              onChange={(e) => setNewUserData({...newUserData, full_name: e.target.value})}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewUserDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreateUser}>Criar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Dialog */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
-            <DialogDescription>
-              Altere o status da assinatura do usuário
-            </DialogDescription>
           </DialogHeader>
           {editingUser && (
             <div className="space-y-4">
-              <div>
-                <p className="font-medium">{editingUser.full_name}</p>
-                <p className="text-sm text-muted-foreground">{editingUser.email}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Status da Assinatura</label>
-                <Select
-                  defaultValue={editingUser.subscription_status || 'none'}
-                  onValueChange={(value) => handleUpdateUserStatus(editingUser.id, value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="canceled">Cancelado</SelectItem>
-                    <SelectItem value="overdue">Vencido</SelectItem>
-                    <SelectItem value="refunded">Reembolsado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Input
+                placeholder="Nome"
+                value={editingUser.full_name}
+                onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
+              />
+              <Input
+                placeholder="Email"
+                value={editingUser.email}
+                disabled
+              />
             </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
+            <Button onClick={handleUpdateUser}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Day Dialog */}
+      <Dialog open={!!editingDay} onOpenChange={() => setEditingDay(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Dia {editingDay?.id}</DialogTitle>
+          </DialogHeader>
+          {editingDay && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  placeholder="Título"
+                  value={editingDay.title}
+                  onChange={(e) => setEditingDay({...editingDay, title: e.target.value})}
+                />
+                <Input
+                  placeholder="Emoji"
+                  value={editingDay.emoji}
+                  onChange={(e) => setEditingDay({...editingDay, emoji: e.target.value})}
+                />
+              </div>
+              <Input
+                placeholder="Subtítulo"
+                value={editingDay.subtitle}
+                onChange={(e) => setEditingDay({...editingDay, subtitle: e.target.value})}
+              />
+              <Textarea
+                placeholder="Mensagem Matinal"
+                value={editingDay.morning_message || ''}
+                onChange={(e) => setEditingDay({...editingDay, morning_message: e.target.value})}
+                rows={3}
+              />
+              <Input
+                placeholder="URL do Áudio da Mensagem Matinal"
+                value={editingDay.morning_audio_url || ''}
+                onChange={(e) => setEditingDay({...editingDay, morning_audio_url: e.target.value})}
+              />
+              <Input
+                placeholder="Título do Conceito"
+                value={editingDay.concept_title || ''}
+                onChange={(e) => setEditingDay({...editingDay, concept_title: e.target.value})}
+              />
+              <Textarea
+                placeholder="Conceito FIRE"
+                value={editingDay.concept || ''}
+                onChange={(e) => setEditingDay({...editingDay, concept: e.target.value})}
+                rows={3}
+              />
+              <Input
+                placeholder="URL do Áudio do Conceito"
+                value={editingDay.concept_audio_url || ''}
+                onChange={(e) => setEditingDay({...editingDay, concept_audio_url: e.target.value})}
+              />
+              <Input
+                placeholder="Título da Tarefa"
+                value={editingDay.task_title || ''}
+                onChange={(e) => setEditingDay({...editingDay, task_title: e.target.value})}
+              />
+              <Textarea
+                placeholder="Compromisso"
+                value={editingDay.commitment || ''}
+                onChange={(e) => setEditingDay({...editingDay, commitment: e.target.value})}
+                rows={2}
+              />
+              <Input
+                placeholder="Preview do Próximo Dia"
+                value={editingDay.next_day_preview || ''}
+                onChange={(e) => setEditingDay({...editingDay, next_day_preview: e.target.value})}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDay(null)}>Cancelar</Button>
+            <Button onClick={handleSaveDay}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Setting Dialog */}
+      <Dialog open={newSettingDialog} onOpenChange={setNewSettingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Configuração</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Chave (ex: n8n_webhook_url)"
+              value={newSettingData.key}
+              onChange={(e) => setNewSettingData({...newSettingData, key: e.target.value})}
+            />
+            <Input
+              placeholder="Valor"
+              value={newSettingData.value}
+              onChange={(e) => setNewSettingData({...newSettingData, value: e.target.value})}
+            />
+            <Input
+              placeholder="Descrição"
+              value={newSettingData.description}
+              onChange={(e) => setNewSettingData({...newSettingData, description: e.target.value})}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewSettingDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreateSetting}>Criar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -512,28 +816,21 @@ const Admin = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Configuração</DialogTitle>
-            <DialogDescription>
-              {editingSetting?.description}
-            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">{editingSetting?.key}</label>
-              <Input
-                value={newSettingValue}
-                onChange={(e) => setNewSettingValue(e.target.value)}
-                placeholder="Valor da configuração"
+          {editingSetting && (
+            <div className="space-y-4">
+              <Input value={editingSetting.key} disabled />
+              <Textarea
+                placeholder="Valor"
+                value={editingSetting.value}
+                onChange={(e) => setEditingSetting({...editingSetting, value: e.target.value})}
+                rows={4}
               />
             </div>
-          </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingSetting(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveSetting} className="btn-fire">
-              <Save className="w-4 h-4 mr-2" />
-              Salvar
-            </Button>
+            <Button variant="outline" onClick={() => setEditingSetting(null)}>Cancelar</Button>
+            <Button onClick={handleSaveSetting}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

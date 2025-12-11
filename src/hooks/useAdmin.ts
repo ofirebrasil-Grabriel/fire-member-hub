@@ -29,6 +29,24 @@ export interface Setting {
   description: string | null;
 }
 
+export interface DayContent {
+  id: number;
+  title: string;
+  subtitle: string;
+  emoji: string;
+  morning_message: string | null;
+  morning_audio_url: string | null;
+  concept: string | null;
+  concept_title: string | null;
+  concept_audio_url: string | null;
+  task_title: string | null;
+  task_steps: any[];
+  tools: string[];
+  reflection_questions: string[];
+  commitment: string | null;
+  next_day_preview: string | null;
+}
+
 export const useAdmin = () => {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -36,6 +54,7 @@ export const useAdmin = () => {
   const [users, setUsers] = useState<UserWithProgress[]>([]);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
+  const [days, setDays] = useState<DayContent[]>([]);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeToday: 0,
@@ -70,20 +89,18 @@ export const useAdmin = () => {
   const fetchUsers = async () => {
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        email,
-        full_name,
-        avatar_url,
-        created_at,
-        subscriptions (status)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching users:', error);
       return;
     }
+
+    // Get subscriptions
+    const { data: subscriptions } = await supabase
+      .from('subscriptions')
+      .select('user_id, status');
 
     // Get day progress for each user
     const usersWithProgress: UserWithProgress[] = await Promise.all(
@@ -97,19 +114,88 @@ export const useAdmin = () => {
           .limit(1)
           .maybeSingle();
 
+        const userSub = subscriptions?.find(s => s.user_id === profile.id);
+
         return {
           id: profile.id,
           email: profile.email,
           full_name: profile.full_name,
           avatar_url: profile.avatar_url,
           created_at: profile.created_at,
-          subscription_status: profile.subscriptions?.[0]?.status || null,
+          subscription_status: userSub?.status || null,
           current_day: progress?.day_id || 0,
         };
       })
     );
 
     setUsers(usersWithProgress);
+  };
+
+  // Fetch days content
+  const fetchDays = async () => {
+    const { data, error } = await supabase
+      .from('days')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching days:', error);
+      return;
+    }
+
+    setDays((data || []).map((d: any) => ({
+      ...d,
+      task_steps: Array.isArray(d.task_steps) ? d.task_steps : [],
+      tools: Array.isArray(d.tools) ? d.tools : [],
+      reflection_questions: Array.isArray(d.reflection_questions) ? d.reflection_questions : [],
+    })));
+  };
+
+  // Create new day
+  const createDay = async (dayData: Partial<DayContent>) => {
+    const { error } = await supabase
+      .from('days')
+      .insert(dayData as any);
+
+    if (error) {
+      console.error('Error creating day:', error);
+      return false;
+    }
+
+    await fetchDays();
+    return true;
+  };
+
+  // Update day
+  const updateDay = async (dayId: number, dayData: Partial<DayContent>) => {
+    const { error } = await supabase
+      .from('days')
+      .update(dayData as any)
+      .eq('id', dayId);
+
+    if (error) {
+      console.error('Error updating day:', error);
+      return false;
+    }
+
+    await fetchDays();
+    return true;
+  };
+
+  // Delete day
+  const deleteDay = async (dayId: number) => {
+    const { error } = await supabase
+      .from('days')
+      .delete()
+      .eq('id', dayId);
+
+    if (error) {
+      console.error('Error deleting day:', error);
+      return false;
+    }
+
+    await fetchDays();
+    return true;
   };
 
   // Fetch webhook logs
@@ -141,6 +227,21 @@ export const useAdmin = () => {
     }
 
     setSettings(data || []);
+  };
+
+  // Create setting
+  const createSetting = async (key: string, value: any, description?: string) => {
+    const { error } = await supabase
+      .from('settings')
+      .insert({ key, value, description });
+
+    if (error) {
+      console.error('Error creating setting:', error);
+      return false;
+    }
+
+    await fetchSettings();
+    return true;
   };
 
   // Calculate stats
@@ -183,6 +284,37 @@ export const useAdmin = () => {
     });
   };
 
+  // Create new user
+  const createUser = async (email: string, password: string, fullName: string) => {
+    try {
+      const response = await fetch(
+        `https://gvjvygukvupjxadevduj.supabase.co/functions/v1/setup-admin`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            action: 'create_user',
+            email, 
+            password, 
+            full_name: fullName 
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Error creating user:', error);
+        return false;
+      }
+
+      await fetchUsers();
+      return true;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      return false;
+    }
+  };
+
   // Update user subscription status
   const updateUserStatus = async (userId: string, status: string) => {
     const { error } = await supabase
@@ -192,12 +324,29 @@ export const useAdmin = () => {
         product_id: 'fire-challenge',
         status,
         started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }, {
         onConflict: 'user_id,product_id',
       });
 
     if (error) {
       console.error('Error updating user status:', error);
+      return false;
+    }
+
+    await fetchUsers();
+    return true;
+  };
+
+  // Update user profile
+  const updateUser = async (userId: string, data: { full_name?: string; email?: string }) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update(data)
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error updating user:', error);
       return false;
     }
 
@@ -238,6 +387,22 @@ export const useAdmin = () => {
     return true;
   };
 
+  // Delete setting
+  const deleteSetting = async (key: string) => {
+    const { error } = await supabase
+      .from('settings')
+      .delete()
+      .eq('key', key);
+
+    if (error) {
+      console.error('Error deleting setting:', error);
+      return false;
+    }
+
+    await fetchSettings();
+    return true;
+  };
+
   // Fetch all data
   const fetchAllData = async () => {
     if (!isAdmin) return;
@@ -247,6 +412,7 @@ export const useAdmin = () => {
       fetchWebhookLogs(),
       fetchSettings(),
       fetchStats(),
+      fetchDays(),
     ]);
   };
 
@@ -263,12 +429,21 @@ export const useAdmin = () => {
     webhookLogs,
     settings,
     stats,
+    days,
+    createUser,
+    updateUser,
     fetchUsers,
     fetchWebhookLogs,
     fetchSettings,
     fetchStats,
+    fetchDays,
+    createDay,
+    updateDay,
+    deleteDay,
     updateUserStatus,
     updateSetting,
+    createSetting,
+    deleteSetting,
     deleteUser,
     refetch: fetchAllData,
   };
