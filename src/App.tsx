@@ -19,6 +19,7 @@ import { AdminUsers } from "./pages/admin/AdminUsers";
 import { AdminChallenges } from "./pages/admin/AdminChallenges";
 import { ChallengeEditor } from "./pages/admin/ChallengeEditor";
 import { AdminSettings } from "./pages/admin/AdminSettings";
+import { AdminWebhooks } from "./pages/admin/AdminWebhooks";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const AppRoutes = () => (
       <Route path="users" element={<AdminUsers />} />
       <Route path="challenges" element={<AdminChallenges />} />
       <Route path="challenges/:id" element={<ChallengeEditor />} />
+      <Route path="webhooks" element={<AdminWebhooks />} />
       <Route path="settings" element={<AdminSettings />} />
     </Route>
     

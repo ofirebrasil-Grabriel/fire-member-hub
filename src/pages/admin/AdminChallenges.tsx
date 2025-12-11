@@ -76,7 +76,7 @@ export const AdminChallenges = () => {
       toast({ title: 'Erro ao criar', variant: 'destructive' });
     } else {
       toast({ title: 'Dia criado!' });
-      navigate(`/admin/challenge/${nextId}`);
+      navigate(`/admin/challenges/${nextId}`);
     }
   };
 
@@ -144,7 +144,7 @@ export const AdminChallenges = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/admin/challenge/${day.id}`)}
+                  onClick={() => navigate(`/admin/challenges/${day.id}`)}
                   className="gap-2"
                 >
                   <Edit2 size={16} /> Editar

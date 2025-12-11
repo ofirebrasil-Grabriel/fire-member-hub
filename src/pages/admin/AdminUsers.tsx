@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { 
   Search, Shield, User, Ban, CheckCircle, Clock, Mail, 
-  ChevronLeft, ChevronRight, Eye, Trash2, Plus, X, Phone, Lock, Loader2 
+  ChevronLeft, ChevronRight, Eye, Trash2, Plus, X, Phone, Lock, Loader2, KeyRound 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ interface UserProfile {
   role: 'admin' | 'member';
   phone?: string;
 }
+
+const ADMIN_FUNCTION_URL = 'https://gvjvygukvupjxadevduj.supabase.co/functions/v1/setup-admin';
 
 export const AdminUsers = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -42,6 +44,12 @@ export const AdminUsers = () => {
     password: ''
   });
   const [modalLoading, setModalLoading] = useState(false);
+
+  // Password Reset Modal
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -166,13 +174,19 @@ export const AdminUsers = () => {
     
     setActionLoading(userId);
     
-    const { error } = await supabase.from('profiles').delete().eq('id', userId);
-    
-    if (error) {
-      toast({ title: 'Erro ao excluir', variant: 'destructive' });
-    } else {
+    try {
+      const response = await fetch(ADMIN_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_user', user_id: userId }),
+      });
+
+      if (!response.ok) throw new Error('Erro ao excluir');
+      
       setUsers(prev => prev.filter(u => u.id !== userId));
       toast({ title: 'Usuário excluído!' });
+    } catch (error: any) {
+      toast({ title: error.message, variant: 'destructive' });
     }
     
     setActionLoading(null);
@@ -195,6 +209,51 @@ export const AdminUsers = () => {
     setShowModal(true);
   };
 
+  const openPasswordModal = (user: UserProfile) => {
+    setPasswordUser(user);
+    setNewPassword('');
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!passwordUser || !newPassword) {
+      toast({ title: 'Preencha a nova senha', variant: 'destructive' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({ title: 'Senha deve ter no mínimo 6 caracteres', variant: 'destructive' });
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    try {
+      const response = await fetch(ADMIN_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_password',
+          user_id: passwordUser.id,
+          new_password: newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Erro ao atualizar senha');
+      }
+      
+      toast({ title: 'Senha atualizada com sucesso!' });
+      setShowPasswordModal(false);
+      setNewPassword('');
+    } catch (error: any) {
+      toast({ title: error.message, variant: 'destructive' });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const handleModalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
@@ -210,23 +269,23 @@ export const AdminUsers = () => {
         toast({ title: 'Usuário atualizado!' });
       } else {
         // Create new user via edge function
-        const response = await fetch(
-          'https://gvjvygukvupjxadevduj.supabase.co/functions/v1/setup-admin',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'create_user',
-              email: formData.email,
-              password: formData.password,
-              full_name: formData.name,
-            }),
-          }
-        );
+        const response = await fetch(ADMIN_FUNCTION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create_user',
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.name,
+          }),
+        });
 
-        if (!response.ok) throw new Error('Falha ao criar usuário');
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Falha ao criar usuário');
+        }
         
-        toast({ title: 'Usuário criado!' });
+        toast({ title: 'Usuário criado com sucesso!' });
       }
 
       setShowModal(false);
@@ -339,6 +398,13 @@ export const AdminUsers = () => {
                           title="Editar"
                         >
                           <Eye size={18} />
+                        </button>
+                        <button
+                          onClick={() => openPasswordModal(user)}
+                          className="p-2 rounded-lg text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors"
+                          title="Resetar Senha"
+                        >
+                          <KeyRound size={18} />
                         </button>
                         <button
                           onClick={() => handleRoleChange(user.id, user.role)}
@@ -462,7 +528,8 @@ export const AdminUsers = () => {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="pl-10"
-                    placeholder="Senha inicial"
+                    placeholder="Senha inicial (mín. 6 caracteres)"
+                    minLength={6}
                   />
                 </div>
               </div>
@@ -477,6 +544,52 @@ export const AdminUsers = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Modal */}
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="text-warning" size={20} />
+              Resetar Senha
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-surface rounded-lg">
+              <p className="text-sm text-muted-foreground">Usuário:</p>
+              <p className="font-medium">{passwordUser?.full_name || 'Sem nome'}</p>
+              <p className="text-sm text-muted-foreground">{passwordUser?.email}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Nova Senha</label>
+              <div className="relative mt-1">
+                <Lock className="absolute left-3 top-3 text-muted-foreground" size={18} />
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pl-10"
+                  placeholder="Nova senha (mín. 6 caracteres)"
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg text-sm text-warning">
+              ⚠️ A senha será alterada imediatamente. O usuário precisará usar a nova senha no próximo login.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handlePasswordReset} disabled={passwordLoading || !newPassword} className="bg-warning hover:bg-warning/90">
+              {passwordLoading ? <Loader2 className="animate-spin" /> : 'Alterar Senha'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
