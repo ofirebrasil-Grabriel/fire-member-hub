@@ -14,7 +14,157 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      day_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          completed_tasks: string[] | null
+          created_at: string | null
+          day_id: number
+          diary_entry: string | null
+          id: string
+          mood: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          completed_tasks?: string[] | null
+          created_at?: string | null
+          day_id: number
+          diary_entry?: string | null
+          id?: string
+          mood?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          completed_tasks?: string[] | null
+          created_at?: string | null
+          day_id?: number
+          diary_entry?: string | null
+          id?: string
+          mood?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "day_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          full_name?: string
+          id: string
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          hotmart_sale_id: string | null
+          id: string
+          product_id: string
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          hotmart_sale_id?: string | null
+          id?: string
+          product_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          hotmart_sale_id?: string | null
+          id?: string
+          product_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_logs: {
+        Row: {
+          event: string
+          id: string
+          payload: Json
+          received_at: string | null
+          response: Json | null
+          source: string
+          status_code: number | null
+        }
+        Insert: {
+          event: string
+          id?: string
+          payload: Json
+          received_at?: string | null
+          response?: Json | null
+          source: string
+          status_code?: number | null
+        }
+        Update: {
+          event?: string
+          id?: string
+          payload?: Json
+          received_at?: string | null
+          response?: Json | null
+          source?: string
+          status_code?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
