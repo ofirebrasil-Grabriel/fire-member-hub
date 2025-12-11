@@ -1,8 +1,11 @@
 import { Trophy, Target, Calendar, Zap } from 'lucide-react';
 import { useUserProgress } from '@/contexts/UserProgressContext';
+import { useDays } from '@/hooks/useDays';
 
 export const StatsCards = () => {
   const { progress, getCompletedDaysCount } = useUserProgress();
+  const { days } = useDays();
+  const totalDays = days.length || 15;
   
   const completedDays = getCompletedDaysCount();
   const totalTasks = Object.values(progress.daysProgress).reduce(
@@ -21,7 +24,7 @@ export const StatsCards = () => {
       icon: Trophy,
       label: 'Dias Completos',
       value: completedDays,
-      suffix: '/15',
+      suffix: `/${totalDays}`,
       color: 'text-success',
       bgColor: 'bg-success/10',
     },

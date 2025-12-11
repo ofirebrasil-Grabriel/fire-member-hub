@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Check, Lock, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserProgress } from '@/contexts/UserProgressContext';
-import { DayContent } from '@/data/challengeData';
+import { DayContent } from '@/hooks/useDays';
 
 interface DayCardProps {
   day: DayContent;
@@ -64,19 +64,19 @@ export const DayCard = ({ day }: DayCardProps) => {
           </p>
           
           {/* Task Progress */}
-          {!isLocked && dayProgress?.completedTasks && (
+          {!isLocked && dayProgress?.completedTasks && day.taskSteps?.length > 0 && (
             <div className="mt-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <div className="h-1.5 flex-1 bg-surface rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-fire rounded-full transition-all duration-300"
                     style={{ 
-                      width: `${(dayProgress.completedTasks.length / (day.taskSteps?.length || 1)) * 100}%` 
+                      width: `${(dayProgress.completedTasks.length / day.taskSteps.length) * 100}%` 
                     }}
                   />
                 </div>
                 <span>
-                  {dayProgress.completedTasks.length}/{day.taskSteps?.length || 0}
+                  {dayProgress.completedTasks.length}/{day.taskSteps.length}
                 </span>
               </div>
             </div>

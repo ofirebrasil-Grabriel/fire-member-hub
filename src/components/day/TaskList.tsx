@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserProgress } from '@/contexts/UserProgressContext';
-import { TaskStep } from '@/data/challengeData';
+import { TaskStep } from '@/hooks/useDays';
 
 interface TaskListProps {
   dayId: number;
