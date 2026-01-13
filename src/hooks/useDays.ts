@@ -54,15 +54,72 @@ interface DatabaseDay {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const tryParseJson = (value: string): unknown | null => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const parseToolString = (raw: string) => {
+  let trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    trimmed = trimmed.slice(1, -1);
+  }
+
+  const tryParseVariants = (value: string) => {
+    let parsed = tryParseJson(value);
+    if (typeof parsed === 'string') {
+      parsed = tryParseJson(parsed);
+    }
+    if (!parsed && value.includes('\\"')) {
+      parsed = tryParseJson(value.replace(/\\"/g, '"'));
+    }
+    return parsed;
+  };
+
+  let parsed = tryParseVariants(trimmed);
+  if (!parsed && trimmed.includes("'")) {
+    parsed = tryParseVariants(trimmed.replace(/'/g, '"'));
+  }
+
+  if (isRecord(parsed)) {
+    return {
+      name: String(parsed.name ?? 'Recurso'),
+      url: String(parsed.url ?? ''),
+      type: String(parsed.type ?? 'text'),
+    };
+  }
+
+  const nameMatch = trimmed.match(/['"]name['"]\s*:\s*['"]([^'"]+)['"]/);
+  const urlMatch = trimmed.match(/['"]url['"]\s*:\s*['"]([^'"]+)['"]/);
+  if (nameMatch || urlMatch) {
+    return {
+      name: nameMatch?.[1] ?? 'Recurso',
+      url: urlMatch?.[1] ?? '',
+      type: 'text',
+    };
+  }
+
+  return null;
+};
+
 const mapDatabaseToContent = (dbDay: DatabaseDay): DayContent => {
   // Parse tools - support both old string[] format and new ResourceFile[] format
   let parsedTools: ResourceFile[] = [];
   if (Array.isArray(dbDay.tools)) {
     parsedTools = dbDay.tools.map((tool) => {
       if (typeof tool === 'string') {
-        return { name: tool, url: '', type: 'text' };
+        const parsed = parseToolString(tool);
+        return parsed ?? { name: tool, url: '', type: 'text' };
       }
       if (isRecord(tool)) {
+        const nameValue = typeof tool.name === 'string' ? tool.name : '';
+        const parsed = nameValue ? parseToolString(nameValue) : null;
+        if (parsed) return parsed;
         return {
           name: String(tool.name ?? 'Recurso'),
           url: String(tool.url ?? ''),

@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Flame, 
+  Flame,
   FolderOpen, 
   User, 
   Settings,
@@ -37,7 +37,7 @@ export const Sidebar = () => {
       <div className="p-6 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-fire flex items-center justify-center shadow-fire">
-            <Flame className="w-6 h-6 text-white" />
+            <img src="/favicon-v2.svg" alt="FIRE" className="h-6 w-6" />
           </div>
           {!collapsed && (
             <div className="animate-fade-in">

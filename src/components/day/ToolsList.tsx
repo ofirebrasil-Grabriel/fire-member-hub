@@ -6,6 +6,52 @@ interface ToolsListProps {
   tools: ResourceFile[];
 }
 
+const tryParseJson = (value: string) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeTool = (tool: ResourceFile): ResourceFile => {
+  if (!tool?.name) return tool;
+  const raw = String(tool.name).trim();
+  if (!raw) return tool;
+
+  let parsed = tryParseJson(raw);
+  if (typeof parsed === 'string') {
+    parsed = tryParseJson(parsed);
+  }
+  if (!parsed && raw.includes('\\"')) {
+    parsed = tryParseJson(raw.replace(/\\"/g, '"'));
+  }
+  if (!parsed && raw.includes("'")) {
+    parsed = tryParseJson(raw.replace(/'/g, '"'));
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    const record = parsed as Record<string, unknown>;
+    return {
+      name: String(record.name ?? tool.name ?? 'Recurso'),
+      url: String(record.url ?? tool.url ?? ''),
+      type: String(record.type ?? tool.type ?? 'text'),
+    };
+  }
+
+  const nameMatch = raw.match(/['"]name['"]\s*:\s*['"]([^'"]+)['"]/);
+  const urlMatch = raw.match(/['"]url['"]\s*:\s*['"]([^'"]+)['"]/);
+  if (nameMatch || urlMatch) {
+    return {
+      name: nameMatch?.[1] ?? String(tool.name),
+      url: urlMatch?.[1] ?? tool.url ?? '',
+      type: tool.type ?? 'text',
+    };
+  }
+
+  return tool;
+};
+
 const getToolIcon = (tool: ResourceFile) => {
   if (tool.type === 'pdf') return FileText;
   if (tool.type === 'spreadsheet') return FileSpreadsheet;
@@ -29,17 +75,18 @@ const handleDownload = (tool: ResourceFile) => {
 };
 
 export const ToolsList = ({ tools }: ToolsListProps) => {
-  const hasDownloadableFiles = tools.some(t => t.url);
+  const normalizedTools = tools.map(normalizeTool);
+  const hasDownloadableFiles = normalizedTools.some(t => t.url);
   
   return (
     <div className="glass-card p-6">
       <h3 className="font-semibold mb-4 flex items-center gap-2">
         <FileSpreadsheet className="w-5 h-5 text-primary" />
-        Ferramentas do Dia
+        Recursos extras
       </h3>
       
       <div className="space-y-3">
-        {tools.map((tool, index) => {
+        {normalizedTools.map((tool, index) => {
           const Icon = getToolIcon(tool);
           const hasUrl = Boolean(tool.url);
           
