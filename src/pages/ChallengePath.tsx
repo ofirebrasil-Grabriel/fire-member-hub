@@ -47,22 +47,22 @@ const ChallengePath = () => {
     dossie: {
       label: 'Dossie',
       icon: BookOpen,
-      tone: 'border-primary/30 bg-primary/10 text-primary',
+      tone: 'border-border/60 bg-surface/70 text-primary/80',
     },
     contencao: {
       label: 'Contencao',
       icon: Shield,
-      tone: 'border-warning/30 bg-warning/10 text-warning',
+      tone: 'border-border/60 bg-surface/70 text-warning/80',
     },
     acordos: {
       label: 'Acordos',
       icon: Sparkles,
-      tone: 'border-success/30 bg-success/10 text-success',
+      tone: 'border-border/60 bg-surface/70 text-success/80',
     },
     motor: {
       label: 'Motor',
       icon: Rocket,
-      tone: 'border-accent/30 bg-accent/10 text-accent',
+      tone: 'border-border/60 bg-surface/70 text-primary/80',
     },
   } as const;
 
@@ -95,11 +95,13 @@ const ChallengePath = () => {
     locked: 'Bloqueado',
   };
 
+  const chipBase =
+    'inline-flex items-center gap-1 rounded-full border border-border/60 bg-surface/70 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider';
   const statusBadgeClasses: Record<'completed' | 'current' | 'available' | 'locked', string> = {
-    completed: 'border border-success/40 bg-success/15 text-success',
-    current: 'border border-primary/40 bg-primary/15 text-primary',
-    available: 'border border-border/60 bg-surface/60 text-muted-foreground',
-    locked: 'border border-border/60 bg-muted/40 text-muted-foreground',
+    completed: `${chipBase} text-success/90`,
+    current: `${chipBase} text-primary/80`,
+    available: `${chipBase} text-muted-foreground`,
+    locked: `${chipBase} text-muted-foreground/70`,
   };
 
   const timelineVariants = {
@@ -134,83 +136,86 @@ const ChallengePath = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-surface/60 px-6 py-8 md:px-8">
+      <div className="mx-auto max-w-5xl space-y-8">
+        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-surface/60 px-6 py-7 md:px-8">
           <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gradient-glass opacity-30 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-10 h-72 w-72 rounded-full bg-surface/70 blur-3xl" />
 
-          <div className="relative grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
-            <div className="space-y-5">
-              <div className="flex flex-wrap items-center gap-3">
+          <div className="relative grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface/70 border border-border/60">
                   <img src="/favicon-v2.svg" alt="FIRE" className="h-7 w-7" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">FIRE 15D</p>
-                  <p className="text-xs text-muted-foreground">Plano guiado de 15 dias</p>
+                  <p className="text-sm font-medium">FIRE 15D</p>
+                  <p className="text-xs text-muted-foreground/80">Plano guiado de 15 dias</p>
                 </div>
-                <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                <span className={`${chipBase} text-primary/80`}>
                   Dia {progress.currentDay} de {totalDays}
                 </span>
                 {currentDayBadge && (
-                  <span className="rounded-full bg-surface/70 px-2 py-1 text-xs text-muted-foreground">
+                  <span className={`${chipBase} text-muted-foreground`}>
                     {currentDayBadge}
                   </span>
                 )}
                 {currentDayPhase && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-surface/70 px-2 py-1 text-xs text-muted-foreground">
+                  <span className={`${chipBase} text-muted-foreground`}>
                     <currentDayPhase.icon className="h-3 w-3" />
                     {currentDayPhase.label}
                   </span>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <h1 className="text-2xl font-semibold md:text-3xl">
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-semibold leading-tight tracking-tight md:text-3xl">
                   Seu plano simples para sair do caos financeiro
                 </h1>
-                <p className="text-sm text-muted-foreground md:text-base">
+                <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
                   Um passo por dia, 15 minutos cada. Tudo organizado para você avançar sem ansiedade.
                 </p>
               </div>
 
-              <div className="glass-card space-y-4 p-4 md:p-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="glass-card space-y-3 p-4 md:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 bg-surface/70 text-foreground">
                     <span className="text-2xl">{currentDayEmoji}</span>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Hoje</p>
-                    <h2 className="text-lg font-semibold">{currentDayTitle}</h2>
-                    <p className="text-sm text-muted-foreground">{currentDaySubtitle}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Hoje</p>
+                    <h2 className="text-base font-semibold md:text-lg">{currentDayTitle}</h2>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{currentDaySubtitle}</p>
                   </div>
                 </div>
-                <Button className="btn-fire" onClick={() => handleSelectDay(currentDayConfig?.id ?? progress.currentDay)}>
+                <Button
+                  className="btn-fire inline-flex items-center gap-2"
+                  onClick={() => handleSelectDay(currentDayConfig?.id ?? progress.currentDay)}
+                >
                   Continuar dia <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="glass-card flex h-full flex-col gap-4 p-5">
+            <div className="glass-card flex h-full flex-col gap-4 p-4 md:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold">Seu progresso</p>
-                  <p className="text-xs text-muted-foreground">Acompanhe a evolução</p>
+                  <p className="text-sm font-medium">Seu progresso</p>
+                  <p className="text-[11px] text-muted-foreground">Acompanhe a evolução</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)}>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setLibraryOpen(true)}>
                   <BookOpen className="h-4 w-4" />
                   Biblioteca
                 </Button>
               </div>
               <div className="flex items-center justify-center">
                 <div
-                  className="relative h-28 w-28 rounded-full p-[3px]"
+                  className="relative h-24 w-24 rounded-full p-[3px]"
                   style={{
                     background: `conic-gradient(hsl(var(--primary)) ${progressPercent}%, hsl(var(--muted)) ${progressPercent}% 100%)`,
                   }}
                 >
                   <div className="absolute inset-[4px] flex flex-col items-center justify-center rounded-full bg-background text-sm font-semibold">
-                    <span className="text-lg">{progressPercent}%</span>
+                    <span className="text-base">{progressPercent}%</span>
                     <span className="text-[11px] text-muted-foreground">concluido</span>
                   </div>
                 </div>
@@ -218,11 +223,11 @@ const ChallengePath = () => {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-xl border border-border/60 bg-surface/60 p-3">
                   <p className="text-xs text-muted-foreground">Concluidos</p>
-                  <p className="text-lg font-semibold">{completedCount}</p>
+                  <p className="text-base font-semibold">{completedCount}</p>
                 </div>
                 <div className="rounded-xl border border-border/60 bg-surface/60 p-3">
                   <p className="text-xs text-muted-foreground">Restantes</p>
-                  <p className="text-lg font-semibold">{daysRemaining}</p>
+                  <p className="text-base font-semibold">{daysRemaining}</p>
                 </div>
               </div>
             </div>
@@ -230,13 +235,13 @@ const ChallengePath = () => {
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold">Sua jornada</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="text-base font-semibold">Sua jornada</h3>
+          <p className="text-sm text-muted-foreground/90">
             Cada etapa foi desenhada para destravar a próxima com clareza.
           </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           <motion.div
             className="relative w-full overflow-clip"
             variants={timelineVariants}
@@ -244,7 +249,7 @@ const ChallengePath = () => {
             whileInView="show"
             viewport={{ once: true, amount: 0.2 }}
           >
-            <Timeline color="secondary" orientation="vertical" className="gap-6">
+            <Timeline color="secondary" orientation="vertical" className="gap-4">
               {DAY_ENGINE.map((day, index) => {
                 const dayContent = dayContentMap.get(day.id);
                 const dayTitle = dayContent?.title ?? day.title;
@@ -258,15 +263,15 @@ const ChallengePath = () => {
                 const isLast = index === DAY_ENGINE.length - 1;
                 const separatorClass = cn(
                   isCompleted && 'bg-success/40',
-                  isCurrent && 'bg-primary/50',
+                  isCurrent && 'bg-border/70',
                   isLocked && 'bg-border/40',
                   !isCompleted && !isCurrent && !isLocked && 'bg-border/60'
                 );
                 const cardAccentClass = cn(
                   isCompleted && 'bg-success/40',
-                  isCurrent && 'bg-primary/60',
+                  isCurrent && 'bg-primary/30',
                   isLocked && 'bg-border/40',
-                  !isCompleted && !isCurrent && !isLocked && 'bg-primary/30'
+                  !isCompleted && !isCurrent && !isLocked && 'bg-border/60'
                 );
                 const StatusIcon = isCompleted ? CheckCircle2 : isCurrent ? Play : isLocked ? Lock : Sparkles;
                 const actionLabel = isLocked
@@ -279,8 +284,8 @@ const ChallengePath = () => {
 
                 return (
                   <motion.div key={day.id} variants={itemVariants}>
-                    <TimelineItem>
-                      <TimelineHeader className="w-12">
+                    <TimelineItem className="items-start gap-4">
+                      <TimelineHeader className="w-11 pt-1">
                         {!isLast && (
                           <TimelineSeparator
                             className={cn('top-10 h-[calc(100%-2.5rem)]', separatorClass)}
@@ -298,13 +303,13 @@ const ChallengePath = () => {
                           {day.id}
                         </TimelineIcon>
                       </TimelineHeader>
-                      <TimelineBody className="-translate-y-2">
+                      <TimelineBody className="pt-0.5">
                         <button
                           type="button"
                           onClick={() => handleSelectDay(day.id)}
                           disabled={isLocked}
                           className={cn(
-                            'group relative flex w-full text-left',
+                            'group relative flex w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                             !isLocked && 'hover:-translate-y-0.5',
                             isLocked && 'cursor-not-allowed opacity-60',
                             'transition-all duration-300'
@@ -312,7 +317,7 @@ const ChallengePath = () => {
                         >
                           <div
                             className={cn(
-                              'glass-card relative w-full space-y-3 rounded-2xl border border-border/50 px-4 py-4 md:px-5',
+                              'glass-card relative w-full space-y-2.5 rounded-2xl border border-border/50 px-4 py-3.5 md:px-5',
                               !isLocked && 'hover:border-primary/30',
                               isCurrent && 'border-primary/40 bg-surface/70',
                               isCompleted && 'border-success/40',
@@ -322,23 +327,23 @@ const ChallengePath = () => {
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-highlight/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                             <span className={cn('absolute inset-y-4 left-0 w-1 rounded-r-full', cardAccentClass)} />
                             <div className="relative flex items-start gap-4">
-                              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/70 bg-surface/70">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-surface/70">
                                 <span className="text-xl">{dayEmoji}</span>
                               </div>
                               <div className="flex-1 space-y-2">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', phase.tone)}>
+                                  <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider', phase.tone)}>
                                     <phase.icon className="h-3 w-3" />
                                     {phase.label}
                                   </span>
-                                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                                     {day.badge}
                                   </span>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <p
                                     className={cn(
-                                      'text-base font-semibold',
+                                      'text-[15px] font-semibold leading-snug',
                                       isLocked && 'text-muted-foreground/80'
                                     )}
                                   >
@@ -346,7 +351,7 @@ const ChallengePath = () => {
                                   </p>
                                   <span
                                     className={cn(
-                                      'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                      'rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider',
                                       statusBadgeClasses[status]
                                     )}
                                   >
@@ -355,13 +360,13 @@ const ChallengePath = () => {
                                 </div>
                                 <p
                                   className={cn(
-                                    'text-sm text-muted-foreground',
+                                    'text-sm leading-relaxed text-muted-foreground',
                                     isLocked && 'text-muted-foreground/60'
                                   )}
                                 >
                                   {dayObjective}
                                 </p>
-                                <div className="flex items-center justify-between gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+                                <div className="flex items-center justify-between gap-3 text-[11px] uppercase tracking-wider text-muted-foreground">
                                   <span className="inline-flex items-center gap-1">
                                     <StatusIcon className="h-3 w-3" />
                                     {actionLabel}
