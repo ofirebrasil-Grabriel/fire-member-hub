@@ -72,14 +72,18 @@ const parseToolString = (raw: string) => {
     trimmed = trimmed.slice(1, -1);
   }
 
-  const tryParseVariants = (value: string) => {
+  const tryParseVariants = (value: string): unknown => {
     let parsed = tryParseJson(value);
-    if (typeof parsed === 'string') {
-      parsed = tryParseJson(parsed);
+
+    // Recursive parsing for double-stringified JSON
+    if (typeof parsed === 'string' && (parsed.startsWith('{') || parsed.startsWith('['))) {
+      return tryParseVariants(parsed);
     }
+
     if (!parsed && value.includes('\\"')) {
       parsed = tryParseJson(value.replace(/\\"/g, '"'));
     }
+
     return parsed;
   };
 
@@ -114,20 +118,47 @@ const mapDatabaseToContent = (dbDay: DatabaseDay): DayContent => {
   let parsedTools: ResourceFile[] = [];
   if (Array.isArray(dbDay.tools)) {
     parsedTools = dbDay.tools.map((tool) => {
+      // Caso 1: tool é uma string (formato antigo)
       if (typeof tool === 'string') {
         const parsed = parseToolString(tool);
         return parsed ?? { name: tool, url: '', type: 'text' };
       }
+
+      // Caso 2: tool é um objeto
       if (isRecord(tool)) {
-        const nameValue = typeof tool.name === 'string' ? tool.name : '';
-        const parsed = nameValue ? parseToolString(nameValue) : null;
-        if (parsed) return parsed;
+        const nameValue = tool.name;
+        const urlValue = tool.url;
+        const typeValue = tool.type;
+
+        // Se name é uma string simples (não parece JSON), usa direto
+        if (typeof nameValue === 'string' && nameValue.trim() &&
+          !nameValue.trim().startsWith('{') && !nameValue.trim().startsWith('[')) {
+          return {
+            name: nameValue.trim(),
+            url: typeof urlValue === 'string' ? urlValue : '',
+            type: typeof typeValue === 'string' ? typeValue : 'text',
+          };
+        }
+
+        // Se name parece ser JSON, tenta parsear
+        if (typeof nameValue === 'string' && nameValue.trim()) {
+          const parsed = parseToolString(nameValue);
+          if (parsed) return parsed;
+        }
+
+        // Fallback: tenta usar os campos como vieram, limpando se necessário
+        let finalName = typeof nameValue === 'string' ? nameValue.trim() : 'Recurso';
+        if (finalName.startsWith('{') || finalName.startsWith('[')) {
+          finalName = 'Recurso';
+        }
+
         return {
-          name: String(tool.name ?? 'Recurso'),
-          url: String(tool.url ?? ''),
-          type: String(tool.type ?? 'text'),
+          name: finalName || 'Recurso',
+          url: typeof urlValue === 'string' ? urlValue : '',
+          type: typeof typeValue === 'string' ? typeValue : 'text',
         };
       }
+
       return { name: 'Recurso', url: '', type: 'text' };
     });
   }
@@ -175,7 +206,7 @@ export const useDays = () => {
   const fetchDays = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     const { data, error: fetchError } = await supabase
       .from('days')
       .select('*')
@@ -207,7 +238,7 @@ export const useDay = (dayId: number) => {
   const fetchDay = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     const { data, error: fetchError } = await supabase
       .from('days')
       .select('*')

@@ -6,65 +6,122 @@ interface ToolsListProps {
   tools: ResourceFile[];
 }
 
-const tryParseJson = (value: string) => {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
+/**
+ * Tenta extrair um objeto válido de uma string que pode estar em formato JSON
+ * mas com vários problemas de encoding/escaping
+ */
+const extractObjectFromString = (input: unknown): Record<string, unknown> | null => {
+  if (!input) return null;
+
+  // Se já é um objeto, retorna ele
+  if (typeof input === 'object' && input !== null && !Array.isArray(input)) {
+    return input as Record<string, unknown>;
   }
+
+  if (typeof input !== 'string') return null;
+
+  const str = String(input).trim();
+  if (!str) return null;
+
+  // Tenta várias abordagens de parsing
+  const attempts = [
+    // 1. Tentar parse direto
+    () => JSON.parse(str),
+    // 2. Remover escapes duplos
+    () => JSON.parse(str.replace(/\\\\/g, '\\')),
+    // 3. Substituir aspas simples por duplas
+    () => JSON.parse(str.replace(/'/g, '"')),
+    // 4. Remover escapes de aspas
+    () => JSON.parse(str.replace(/\\"/g, '"')),
+    // 5. Parse do resultado (caso seja string encapsulada)
+    () => {
+      const strToParse = typeof str === 'string' ? str : JSON.stringify(str);
+      const first = JSON.parse(strToParse);
+      if (typeof first === 'string' && (first.startsWith('{') || first.startsWith('['))) {
+        return JSON.parse(first);
+      }
+      return first;
+    },
+    // 6. Extrair via regex como fallback
+    () => {
+      const nameMatch = str.match(/["']?name["']?\s*[:=]\s*["']([^"']+)["']/i);
+      const urlMatch = str.match(/["']?url["']?\s*[:=]\s*["']([^"']+)["']/i);
+      const typeMatch = str.match(/["']?type["']?\s*[:=]\s*["']([^"']+)["']/i);
+      if (nameMatch || urlMatch) {
+        return {
+          name: nameMatch?.[1] || undefined,
+          url: urlMatch?.[1] || undefined,
+          type: typeMatch?.[1] || undefined,
+        };
+      }
+      return null;
+    },
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const result = attempt();
+      if (result && typeof result === 'object' && !Array.isArray(result)) {
+        return result as Record<string, unknown>;
+      }
+    } catch {
+      // Ignora e tenta próxima abordagem
+    }
+  }
+
+  return null;
 };
 
+/**
+ * Normaliza um tool para garantir que name, url e type estão corretos
+ */
 const normalizeTool = (tool: ResourceFile): ResourceFile => {
-  if (!tool?.name) return tool;
-  const raw = String(tool.name).trim();
-  if (!raw) return tool;
+  if (!tool) return { name: 'Recurso', url: '', type: 'text' };
 
-  let parsed = tryParseJson(raw);
-  if (typeof parsed === 'string') {
-    parsed = tryParseJson(parsed);
-  }
-  if (!parsed && raw.includes('\\"')) {
-    parsed = tryParseJson(raw.replace(/\\"/g, '"'));
-  }
-  if (!parsed && raw.includes("'")) {
-    parsed = tryParseJson(raw.replace(/'/g, '"'));
-  }
-
-  if (parsed && typeof parsed === 'object') {
-    const record = parsed as Record<string, unknown>;
+  // Se name já parece ser um nome normal (não JSON), retorna como está
+  const nameStr = String(tool.name || '').trim();
+  if (nameStr && !nameStr.startsWith('{') && !nameStr.startsWith('[') && !nameStr.includes('"name"')) {
     return {
-      name: String(record.name ?? tool.name ?? 'Recurso'),
-      url: String(record.url ?? tool.url ?? ''),
-      type: String(record.type ?? tool.type ?? 'text'),
+      name: nameStr || 'Recurso',
+      url: tool.url || '',
+      type: tool.type || 'text',
     };
   }
 
-  const nameMatch = raw.match(/['"]name['"]\s*:\s*['"]([^'"]+)['"]/);
-  const urlMatch = raw.match(/['"]url['"]\s*:\s*['"]([^'"]+)['"]/);
-  if (nameMatch || urlMatch) {
+  // Tenta extrair objeto do campo name
+  const parsed = extractObjectFromString(tool.name);
+
+  if (parsed) {
     return {
-      name: nameMatch?.[1] ?? String(tool.name),
-      url: urlMatch?.[1] ?? tool.url ?? '',
-      type: tool.type ?? 'text',
+      name: String(parsed.name || parsed.title || 'Recurso').trim(),
+      url: String(parsed.url || parsed.link || tool.url || '').trim(),
+      type: String(parsed.type || tool.type || 'text').trim(),
     };
   }
 
-  return tool;
+  // Fallback: usa o que vier, mas limpa o name se for JSON inválido
+  let finalName = nameStr;
+  if (finalName.startsWith('{') || finalName.startsWith('[')) {
+    finalName = 'Recurso';
+  }
+
+  return {
+    name: finalName || 'Recurso',
+    url: tool.url || '',
+    type: tool.type || 'text',
+  };
 };
 
 const getToolIcon = (tool: ResourceFile) => {
-  if (tool.type === 'pdf') return FileText;
-  if (tool.type === 'spreadsheet') return FileSpreadsheet;
-  if (tool.type === 'document') return FileText;
-  if (tool.type === 'video') return Video;
-  if (tool.type === 'audio') return Music;
-  
-  // Fallback based on name
-  const nameLower = tool.name.toLowerCase();
-  if (nameLower.includes('planilha') || nameLower.includes('calculadora')) return FileSpreadsheet;
-  if (nameLower.includes('vídeo') || nameLower.includes('video')) return Video;
-  if (nameLower.includes('áudio') || nameLower.includes('audio')) return Music;
-  
+  const type = (tool.type || '').toLowerCase();
+  const name = (tool.name || '').toLowerCase();
+
+  if (type === 'pdf' || name.includes('.pdf')) return FileText;
+  if (type === 'spreadsheet' || name.includes('planilha') || name.includes('excel') || name.includes('.xlsx')) return FileSpreadsheet;
+  if (type === 'document' || name.includes('.doc')) return FileText;
+  if (type === 'video' || name.includes('vídeo') || name.includes('video')) return Video;
+  if (type === 'audio' || name.includes('áudio') || name.includes('audio')) return Music;
+
   return File;
 };
 
@@ -77,58 +134,60 @@ const handleDownload = (tool: ResourceFile) => {
 export const ToolsList = ({ tools }: ToolsListProps) => {
   const normalizedTools = tools.map(normalizeTool);
   const hasDownloadableFiles = normalizedTools.some(t => t.url);
-  
+
   return (
-    <div className="glass-card p-6">
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
-        <FileSpreadsheet className="w-5 h-5 text-primary" />
+    <div className="glass-card p-4 sm:p-6">
+      <h3 className="font-semibold mb-4 flex items-center gap-2 text-sm sm:text-base">
+        <FileSpreadsheet className="w-5 h-5 text-primary shrink-0" />
         Recursos extras
       </h3>
-      
+
       <div className="space-y-3">
         {normalizedTools.map((tool, index) => {
           const Icon = getToolIcon(tool);
           const hasUrl = Boolean(tool.url);
-          
+
           return (
             <div
               key={index}
               onClick={() => hasUrl && handleDownload(tool)}
               className={cn(
-                "flex items-center gap-4 p-3 rounded-xl bg-surface/50 border border-border/50",
+                "flex items-center gap-3 p-3 rounded-xl bg-surface/50 border border-border/50",
                 "transition-all group",
-                hasUrl 
-                  ? "hover:bg-surface hover:border-border cursor-pointer" 
+                hasUrl
+                  ? "hover:bg-surface hover:border-border cursor-pointer"
                   : "opacity-75"
               )}
             >
               <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                "w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0",
                 hasUrl ? "bg-primary/10" : "bg-muted"
               )}>
                 <Icon className={cn(
-                  "w-5 h-5",
+                  "w-4 h-4 sm:w-5 sm:h-5",
                   hasUrl ? "text-primary" : "text-muted-foreground"
                 )} />
               </div>
-              
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{tool.name}</p>
+
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="font-medium text-sm sm:text-base truncate">{tool.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {hasUrl ? 'Clique para baixar' : 'Em breve'}
                 </p>
               </div>
-              
-              {hasUrl ? (
-                <Download className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              ) : (
-                <ExternalLink className="w-5 h-5 text-muted-foreground/50" />
-              )}
+
+              <div className="shrink-0">
+                {hasUrl ? (
+                  <Download className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                ) : (
+                  <ExternalLink className="w-5 h-5 text-muted-foreground/50" />
+                )}
+              </div>
             </div>
           );
         })}
       </div>
-      
+
       {!hasDownloadableFiles && (
         <p className="text-xs text-muted-foreground mt-4 text-center">
           Os materiais serão disponibilizados pelo administrador
