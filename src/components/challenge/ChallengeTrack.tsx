@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ChevronRight, Lock, Play, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LUCIDE_ICON_MAP, type LucideIconName } from '@/components/icons/lucideIconMap';
 
 export type TrackStatus = 'completed' | 'current' | 'available' | 'locked';
 
@@ -17,6 +18,7 @@ export interface TrackItem {
   objective: string;
   badge: string;
   emoji: string;
+  iconName?: LucideIconName | null;
   phase: TrackPhase;
   status: TrackStatus;
 }
@@ -84,7 +86,14 @@ const TrackShowcaseCard = ({ item, onSelect }: { item: TrackItem; onSelect: (day
       <div className="relative space-y-4 text-center">
         <div className="flex items-center justify-center">
           <div className="relative flex h-16 w-16 items-center justify-center rounded-[20px] border border-border/60 bg-surface/80">
-            <span className="text-2xl">{item.emoji}</span>
+            {item.iconName && LUCIDE_ICON_MAP[item.iconName] ? (
+              (() => {
+                const Icon = LUCIDE_ICON_MAP[item.iconName];
+                return <Icon className="h-7 w-7 text-primary" />;
+              })()
+            ) : (
+              <span className="text-2xl">{item.emoji}</span>
+            )}
             <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-primary/70" />
           </div>
         </div>

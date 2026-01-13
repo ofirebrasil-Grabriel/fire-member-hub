@@ -9,6 +9,7 @@ import { useUserProgress } from '@/contexts/UserProgressContext';
 import { Button } from '@/components/ui/button';
 import { useDays } from '@/hooks/useDays';
 import { ChallengeTrack } from '@/components/challenge/ChallengeTrack';
+import { LUCIDE_ICON_MAP } from '@/components/icons/lucideIconMap';
 
 const ChallengePath = () => {
   const { progress, canAccessDay, getCompletedDaysCount, completeDay } = useUserProgress();
@@ -55,6 +56,8 @@ const ChallengePath = () => {
   const currentDayTitle = currentDayContent?.title || currentDayConfig?.title || `Dia ${progress.currentDay}`;
   const currentDaySubtitle = currentDayContent?.subtitle || currentDayConfig?.objective || 'Siga para o proximo passo';
   const currentDayEmoji = currentDayContent?.emoji || '📅';
+  const currentDayIconName = currentDayContent?.iconName ?? null;
+  const CurrentDayIcon = currentDayIconName ? LUCIDE_ICON_MAP[currentDayIconName] : null;
   const currentDayBadge = currentDayConfig?.badge;
   const currentDayPhase = currentDayConfig ? phaseMeta[currentDayConfig.phase] : null;
   const daysRemaining = Math.max(totalDays - completedCount, 0);
@@ -138,7 +141,11 @@ const ChallengePath = () => {
               <div className="glass-card space-y-3 p-4 md:p-5">
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 bg-surface/70 text-foreground">
-                    <span className="text-2xl">{currentDayEmoji}</span>
+                    {CurrentDayIcon ? (
+                      <CurrentDayIcon className="h-6 w-6 text-primary" />
+                    ) : (
+                      <span className="text-2xl">{currentDayEmoji}</span>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Hoje</p>
@@ -210,6 +217,7 @@ const ChallengePath = () => {
                 objective: dayContent?.subtitle ?? day.objective,
                 badge: day.badge,
                 emoji: dayContent?.emoji ?? '📅',
+                iconName: dayContent?.iconName ?? null,
                 phase: phaseMeta[day.phase],
                 status: getStatus(day.id),
               };

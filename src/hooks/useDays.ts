@@ -18,6 +18,7 @@ export interface DayContent {
   title: string;
   subtitle: string;
   emoji: string;
+  iconName: string | null;
   morningMessage: string | null;
   morningAudioUrl: string | null;
   concept: string | null;
@@ -37,6 +38,7 @@ interface DatabaseDay {
   title: string;
   subtitle: string;
   emoji: string | null;
+  icon_name: string | null;
   morning_message: string | null;
   morning_audio_url: string | null;
   concept: string | null;
@@ -149,6 +151,7 @@ const mapDatabaseToContent = (dbDay: DatabaseDay): DayContent => {
     title: dbDay.title,
     subtitle: dbDay.subtitle,
     emoji: dbDay.emoji || '📅',
+    iconName: dbDay.icon_name ?? null,
     morningMessage: dbDay.morning_message,
     morningAudioUrl: dbDay.morning_audio_url,
     concept: dbDay.concept,
