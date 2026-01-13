@@ -28,8 +28,8 @@ export const WelcomeCard = () => {
   return (
     <div className="glass-card p-6 md:p-8 relative overflow-hidden">
       {/* Background Decoration */}
-      <div className="absolute -right-20 -top-20 w-64 h-64 bg-gradient-fire rounded-full opacity-10 blur-3xl" />
-      <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/20 rounded-full blur-2xl" />
+      <div className="absolute -right-20 -top-20 w-64 h-64 bg-gradient-glass rounded-full opacity-30 blur-3xl" />
+      <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-surface/70 rounded-full blur-2xl" />
       
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-4 flex-wrap">
