@@ -9,7 +9,7 @@ import { useUserProgress } from '@/contexts/UserProgressContext';
 import { Button } from '@/components/ui/button';
 import { useDays } from '@/hooks/useDays';
 import { ChallengeTrack } from '@/components/challenge/ChallengeTrack';
-import { LUCIDE_ICON_MAP } from '@/components/icons/lucideIconMap';
+import { LUCIDE_ICON_MAP, type LucideIconName } from '@/components/icons/lucideIconMap';
 
 const ChallengePath = () => {
   const { progress, canAccessDay, getCompletedDaysCount, completeDay } = useUserProgress();
@@ -56,7 +56,7 @@ const ChallengePath = () => {
   const currentDayTitle = currentDayContent?.title || currentDayConfig?.title || `Dia ${progress.currentDay}`;
   const currentDaySubtitle = currentDayContent?.subtitle || currentDayConfig?.objective || 'Siga para o proximo passo';
   const currentDayEmoji = currentDayContent?.emoji || '📅';
-  const currentDayIconName = currentDayContent?.iconName ?? null;
+  const currentDayIconName = (currentDayContent?.iconName ?? null) as LucideIconName | null;
   const CurrentDayIcon = currentDayIconName ? LUCIDE_ICON_MAP[currentDayIconName] : null;
   const currentDayBadge = currentDayConfig?.badge;
   const currentDayPhase = currentDayConfig ? phaseMeta[currentDayConfig.phase] : null;
@@ -217,7 +217,7 @@ const ChallengePath = () => {
                 objective: dayContent?.subtitle ?? day.objective,
                 badge: day.badge,
                 emoji: dayContent?.emoji ?? '📅',
-                iconName: dayContent?.iconName ?? null,
+                iconName: (dayContent?.iconName ?? null) as LucideIconName | null,
                 phase: phaseMeta[day.phase],
                 status: getStatus(day.id),
               };
