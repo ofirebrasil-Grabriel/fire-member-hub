@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Save, ArrowLeft, Plus, Trash2, Upload, Loader2, FileText, Mic, Headphones, ArrowUp, ArrowDown,
@@ -49,13 +49,7 @@ export const ChallengeEditor = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchDay(parseInt(id));
-    }
-  }, [id]);
-
-  const fetchDay = async (dayId: number) => {
+  const fetchDay = useCallback(async (dayId: number) => {
     setLoading(true);
     const { data, error } = await supabase
       .from('days')
@@ -72,11 +66,19 @@ export const ChallengeEditor = () => {
     // Parse tools - support both old string[] format and new ResourceFile[] format
     let parsedTools: ResourceFile[] = [];
     if (Array.isArray(data.tools)) {
-      parsedTools = data.tools.map((tool: any) => {
+      parsedTools = data.tools.map((tool) => {
         if (typeof tool === 'string') {
           return { name: tool, url: '', type: 'text' };
         }
-        return tool as ResourceFile;
+        if (tool && typeof tool === 'object') {
+          const value = tool as Record<string, unknown>;
+          return {
+            name: String(value.name ?? 'Material'),
+            url: String(value.url ?? ''),
+            type: String(value.type ?? 'text'),
+          };
+        }
+        return { name: 'Material', url: '', type: 'text' };
       });
     }
 
@@ -87,9 +89,15 @@ export const ChallengeEditor = () => {
       reflection_questions: Array.isArray(data.reflection_questions) ? (data.reflection_questions as unknown as string[]) : [],
     });
     setLoading(false);
-  };
+  }, [navigate]);
 
-  const handleChange = (field: keyof DayData, value: any) => {
+  useEffect(() => {
+    if (id) {
+      fetchDay(parseInt(id));
+    }
+  }, [id, fetchDay]);
+
+  const handleChange = (field: keyof DayData, value: unknown) => {
     if (!day) return;
     setDay({ ...day, [field]: value });
   };
@@ -179,8 +187,9 @@ export const ChallengeEditor = () => {
       setDay({ ...day, tools: newTools });
       
       toast({ title: 'Arquivo enviado!' });
-    } catch (error: any) {
-      toast({ title: 'Erro no upload: ' + error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado';
+      toast({ title: 'Erro no upload: ' + message, variant: 'destructive' });
     } finally {
       setUploading(null);
       event.target.value = '';
@@ -237,8 +246,9 @@ export const ChallengeEditor = () => {
 
       handleChange(field, publicUrl);
       toast({ title: 'Áudio enviado!' });
-    } catch (error: any) {
-      toast({ title: 'Erro no upload: ' + error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado';
+      toast({ title: 'Erro no upload: ' + message, variant: 'destructive' });
     } finally {
       setUploading(null);
       event.target.value = '';
@@ -261,8 +271,8 @@ export const ChallengeEditor = () => {
         concept_title: day.concept_title,
         concept_audio_url: day.concept_audio_url,
         task_title: day.task_title,
-        task_steps: day.task_steps as any,
-        tools: day.tools as any,
+        task_steps: day.task_steps as unknown[],
+        tools: day.tools as unknown[],
         reflection_questions: day.reflection_questions,
         commitment: day.commitment,
         next_day_preview: day.next_day_preview,

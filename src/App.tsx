@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import DayPage from "./pages/DayPage";
-import Challenge from "./pages/Challenge";
+import ChallengePath from "./pages/ChallengePath";
 import Resources from "./pages/Resources";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
@@ -65,7 +65,8 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-    <Route path="/desafio" element={<ProtectedRoute><Challenge /></ProtectedRoute>} />
+    <Route path="/app" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
+    <Route path="/desafio" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
     <Route path="/dia/:id" element={<ProtectedRoute><DayPage /></ProtectedRoute>} />
     <Route path="/recursos" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
     <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { useAdmin, DayContent } from '@/hooks/useAdmin';
+import { useAdmin, DayContent, Setting, UserWithProgress } from '@/hooks/useAdmin';
 import { 
   Users, 
   Calendar, 
@@ -70,7 +70,7 @@ const Admin = () => {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   
   // User dialogs
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<UserWithProgress | null>(null);
   const [newUserDialog, setNewUserDialog] = useState(false);
   const [newUserData, setNewUserData] = useState({ email: '', password: '', full_name: '' });
   
@@ -79,7 +79,8 @@ const Admin = () => {
   const [newDayDialog, setNewDayDialog] = useState(false);
   
   // Setting dialogs
-  const [editingSetting, setEditingSetting] = useState<any>(null);
+  type EditableSetting = Omit<Setting, 'value'> & { value: string };
+  const [editingSetting, setEditingSetting] = useState<EditableSetting | null>(null);
   const [newSettingDialog, setNewSettingDialog] = useState(false);
   const [newSettingData, setNewSettingData] = useState({ key: '', value: '', description: '' });
 
@@ -231,7 +232,9 @@ const Admin = () => {
     let value = editingSetting.value;
     try {
       value = JSON.parse(editingSetting.value);
-    } catch {}
+    } catch {
+      // Valor permanece como string caso o JSON seja invalido
+    }
     
     const success = await updateSetting(editingSetting.key, value);
     if (success) {
@@ -250,7 +253,9 @@ const Admin = () => {
     let value = newSettingData.value;
     try {
       value = JSON.parse(newSettingData.value);
-    } catch {}
+    } catch {
+      // Valor permanece como string caso o JSON seja invalido
+    }
     
     const success = await createSetting(newSettingData.key, value, newSettingData.description);
     if (success) {

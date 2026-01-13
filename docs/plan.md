@@ -636,3 +636,69 @@ Criar Migrations SQL para as Novas Tabelas
 Criar Day Engine com Schema dos 15 Dias
 Criar Tela Única com Trilha + Modal
 Evoluir Gradualmente: Adicionar CRUD às Páginas Existentes
+
+---
+
+# Status de Execucao (feito)
+
+## Banco de Dados e Tipos
+- [x] Migrations criadas para `user_profile`, `debts`, `calendar_items`, `monthly_budget`, `card_policy`, `cuts`, `negotiations`, `plan_306090`, `weekly_ritual`.
+- [x] Coluna `payload` adicionada em `day_progress`.
+- [x] Tipos do Supabase atualizados em `src/integrations/supabase/types.ts`.
+
+Arquivos:
+- `supabase/migrations/20251212090000_create_user_profile.sql`
+- `supabase/migrations/20251212090100_create_debts.sql`
+- `supabase/migrations/20251212090200_create_calendar_items.sql`
+- `supabase/migrations/20251212090300_create_monthly_budget.sql`
+- `supabase/migrations/20251212090400_create_card_policy.sql`
+- `supabase/migrations/20251212090500_create_cuts.sql`
+- `supabase/migrations/20251212090600_create_negotiations.sql`
+- `supabase/migrations/20251212090700_create_plan_306090.sql`
+- `supabase/migrations/20251212090800_create_weekly_ritual.sql`
+- `supabase/migrations/20251212090900_add_payload_to_day_progress.sql`
+- `src/integrations/supabase/types.ts`
+
+## Day Engine
+- [x] `src/config/dayEngine.ts` com schema completo dos 15 dias.
+- [x] `src/services/dayEngine.ts` com `completeDay`, calculos de metricas e side effects (ex.: calendario a partir das dividas).
+
+## Hooks + CRUD
+- [x] Hooks CRUD: `useDebts`, `useCalendarItems`, `useNegotiations`, `useCuts`, `useUserProfile`.
+- [x] Componentes base: `DayInputForm`, `CrudSection`, `OutputPanel`.
+
+Arquivos:
+- `src/hooks/useDebts.ts`
+- `src/hooks/useCalendarItems.ts`
+- `src/hooks/useNegotiations.ts`
+- `src/hooks/useCuts.ts`
+- `src/hooks/useUserProfile.ts`
+- `src/components/challenge/DayInputForm.tsx`
+- `src/components/challenge/CrudSection.tsx`
+- `src/components/challenge/OutputPanel.tsx`
+
+## UI Single-Screen
+- [x] Nova tela `ChallengePath` com trilha visual e modal por dia.
+- [x] `DayModal`, `PathProgress`, `DayNode` e `LibraryModal` implementados.
+- [x] Biblioteca estatica criada em `src/data/library.ts`.
+- [x] Rotas e navegacao apontando para `/app`.
+
+Arquivos:
+- `src/pages/ChallengePath.tsx`
+- `src/components/challenge/DayModal.tsx`
+- `src/components/challenge/PathProgress.tsx`
+- `src/components/challenge/DayNode.tsx`
+- `src/components/challenge/LibraryModal.tsx`
+- `src/data/library.ts`
+- `src/App.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/components/layout/MobileNav.tsx`
+- `src/components/dashboard/DayCard.tsx`
+- `src/components/dashboard/WelcomeCard.tsx`
+
+## Progresso com Supabase
+- [x] `UserProgressContext` agora sincroniza com `day_progress` e `profiles`.
+- [x] `payload` armazenado por dia para reusar nos formularios.
+
+Arquivo:
+- `src/contexts/UserProgressContext.tsx`

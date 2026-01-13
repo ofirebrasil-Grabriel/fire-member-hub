@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface TaskStep {
   id: string;
@@ -42,33 +43,48 @@ interface DatabaseDay {
   concept_title: string | null;
   concept_audio_url: string | null;
   task_title: string | null;
-  task_steps: any;
-  tools: any;
+  task_steps: Json | null;
+  tools: Json | null;
   reflection_questions: string[] | null;
   commitment: string | null;
   next_day_preview: string | null;
   description: string | null;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 const mapDatabaseToContent = (dbDay: DatabaseDay): DayContent => {
   // Parse tools - support both old string[] format and new ResourceFile[] format
   let parsedTools: ResourceFile[] = [];
   if (Array.isArray(dbDay.tools)) {
-    parsedTools = dbDay.tools.map((tool: any) => {
+    parsedTools = dbDay.tools.map((tool) => {
       if (typeof tool === 'string') {
         return { name: tool, url: '', type: 'text' };
       }
-      return tool as ResourceFile;
+      if (isRecord(tool)) {
+        return {
+          name: String(tool.name ?? 'Recurso'),
+          url: String(tool.url ?? ''),
+          type: String(tool.type ?? 'text'),
+        };
+      }
+      return { name: 'Recurso', url: '', type: 'text' };
     });
   }
 
   // Parse task_steps
   let parsedTasks: TaskStep[] = [];
   if (Array.isArray(dbDay.task_steps)) {
-    parsedTasks = dbDay.task_steps.map((task: any) => ({
-      id: task.id || `task-${Math.random()}`,
-      text: task.text || ''
-    }));
+    parsedTasks = dbDay.task_steps.map((task, index) => {
+      if (isRecord(task)) {
+        return {
+          id: String(task.id ?? `task-${index}`),
+          text: String(task.text ?? ''),
+        };
+      }
+      return { id: `task-${index}`, text: '' };
+    });
   }
 
   return {
@@ -96,11 +112,7 @@ export const useDays = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchDays();
-  }, []);
-
-  const fetchDays = async () => {
+  const fetchDays = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -118,7 +130,11 @@ export const useDays = () => {
     const mappedDays = (data || []).map(mapDatabaseToContent);
     setDays(mappedDays);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchDays();
+  }, [fetchDays]);
 
   return { days, loading, error, refetch: fetchDays };
 };
@@ -128,13 +144,7 @@ export const useDay = (dayId: number) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (dayId) {
-      fetchDay();
-    }
-  }, [dayId]);
-
-  const fetchDay = async () => {
+  const fetchDay = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -154,7 +164,13 @@ export const useDay = (dayId: number) => {
       setDay(mapDatabaseToContent(data));
     }
     setLoading(false);
-  };
+  }, [dayId]);
+
+  useEffect(() => {
+    if (dayId) {
+      fetchDay();
+    }
+  }, [dayId, fetchDay]);
 
   return { day, loading, error, refetch: fetchDay };
 };

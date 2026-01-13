@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Webhook, RefreshCw, Search, Filter, Clock, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import type { Json } from '@/integrations/supabase/types';
 
 interface WebhookLog {
   id: string;
   source: string;
   event: string;
-  payload: any;
-  response: any;
+  payload: Json;
+  response: Json | null;
   status_code: number | null;
   received_at: string;
 }
@@ -25,11 +26,7 @@ export const AdminWebhooks = () => {
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [sourceFilter]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     
     let query = supabase
@@ -51,7 +48,11 @@ export const AdminWebhooks = () => {
       setLogs(data || []);
     }
     setLoading(false);
-  };
+  }, [sourceFilter]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const filteredLogs = logs.filter(log => {
     if (!searchTerm) return true;
@@ -77,9 +78,11 @@ export const AdminWebhooks = () => {
     return <AlertTriangle size={16} className="text-warning" />;
   };
 
-  const getEventBadge = (event: string, payload: any) => {
+  const getEventBadge = (event: string, payload: Json) => {
     const eventLower = event?.toLowerCase() || '';
-    const payloadEvent = payload?.event?.toLowerCase() || '';
+    const payloadRecord = typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : {};
+    const payloadEventValue = payloadRecord.event;
+    const payloadEvent = typeof payloadEventValue === 'string' ? payloadEventValue.toLowerCase() : '';
     
     if (eventLower.includes('approved') || eventLower.includes('complete') || payloadEvent.includes('approved')) {
       return 'bg-success/20 text-success border-success/30';
@@ -93,12 +96,21 @@ export const AdminWebhooks = () => {
     return 'bg-primary/20 text-primary border-primary/30';
   };
 
-  const extractInfo = (payload: any) => {
-    const data = payload?.data || payload;
+  const extractInfo = (payload: Json) => {
+    const payloadRecord = typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : {};
+    const data = typeof payloadRecord.data === 'object' && payloadRecord.data !== null
+      ? (payloadRecord.data as Record<string, unknown>)
+      : payloadRecord;
+    const buyer = typeof data.buyer === 'object' && data.buyer !== null
+      ? (data.buyer as Record<string, unknown>)
+      : {};
+    const product = typeof data.product === 'object' && data.product !== null
+      ? (data.product as Record<string, unknown>)
+      : {};
     return {
-      email: data?.buyer?.email || data?.email || data?.user_email || 'N/A',
-      product: data?.product?.name || data?.product_name || 'N/A',
-      event: payload?.event || payload?.hottok || 'Evento',
+      email: (buyer.email as string) || (data.email as string) || (data.user_email as string) || 'N/A',
+      product: (product.name as string) || (data.product_name as string) || 'N/A',
+      event: (payloadRecord.event as string) || (payloadRecord.hottok as string) || 'Evento',
     };
   };
 

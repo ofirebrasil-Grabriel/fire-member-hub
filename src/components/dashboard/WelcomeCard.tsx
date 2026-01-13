@@ -66,7 +66,7 @@ export const WelcomeCard = () => {
               </div>
               
               <Link 
-                to={`/dia/${currentDay.id}`}
+                to={`/app?day=${currentDay.id}`}
                 className="inline-flex items-center gap-2 btn-fire text-sm mt-2"
               >
                 Continuar Desafio

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Flame, label: 'Desafio', path: '/desafio' },
+  { icon: Flame, label: 'Desafio', path: '/app' },
   { icon: FolderOpen, label: 'Recursos', path: '/recursos' },
   { icon: User, label: 'Perfil', path: '/perfil' },
 ];
@@ -17,7 +17,7 @@ export const MobileNav = () => {
       <div className="flex items-center justify-around py-2 px-4">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || 
-            (item.path === '/desafio' && location.pathname.startsWith('/dia/'));
+            (item.path === '/app' && (location.pathname.startsWith('/app') || location.pathname.startsWith('/dia/')));
           
           return (
             <Link

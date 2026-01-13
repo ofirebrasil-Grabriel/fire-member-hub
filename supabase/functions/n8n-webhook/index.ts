@@ -9,7 +9,7 @@ interface N8nPayload {
   event: string;
   user_email?: string;
   user_id?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 Deno.serve(async (req) => {
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       payload: payload,
     }).select('id').single();
 
-    let response: Record<string, any> = { success: true };
+    const response: Record<string, unknown> = { success: true };
 
     // Handle different event types from n8n
     switch (payload.event) {
@@ -92,9 +92,9 @@ Deno.serve(async (req) => {
         }
         break;
 
-      case 'get_milestone_users':
+      case 'get_milestone_users': {
         // Return users who reached a milestone (for batch emails)
-        const milestone = payload.data?.milestone || 5;
+        const milestone = typeof payload.data?.milestone === 'number' ? payload.data.milestone : 5;
         const { data: milestoneUsers } = await supabase
           .from('day_progress')
           .select(`
@@ -106,13 +106,20 @@ Deno.serve(async (req) => {
           .eq('day_id', milestone)
           .eq('completed', true);
 
-        response.users = milestoneUsers?.map((p: any) => ({
-          user_id: p.user_id,
-          email: p.profiles?.email,
-          name: p.profiles?.full_name,
-          completed_at: p.completed_at,
-        })) || [];
+        const users = (milestoneUsers || []).map((item: {
+          user_id: string;
+          completed_at: string | null;
+          profiles?: { email?: string | null; full_name?: string | null } | null;
+        }) => ({
+          user_id: item.user_id,
+          email: item.profiles?.email,
+          name: item.profiles?.full_name,
+          completed_at: item.completed_at,
+        }));
+
+        response.users = users;
         break;
+      }
 
       default:
         console.log('Unknown event type:', payload.event);
