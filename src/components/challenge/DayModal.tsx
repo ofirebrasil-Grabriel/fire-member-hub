@@ -112,13 +112,13 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center sm:p-4"
           >
-            <div className="modal-content">
-              <div className="sticky top-0 z-10 space-y-2 rounded-t-2xl border-b border-border/50 bg-popover/95 p-4 backdrop-blur-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+            <div className="modal-content flex h-full flex-col sm:h-auto">
+              <div className="sticky top-0 z-10 shrink-0 space-y-2 border-b border-border/50 bg-popover/95 p-3 backdrop-blur-sm sm:rounded-t-2xl sm:p-4">
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="flex-1 space-y-1 sm:space-y-2">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-medium sm:gap-2 sm:text-xs">
                       <span className="text-primary">DIA {config.id}</span>
                       <span className="flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-primary">
                         <Clock className="h-3 w-3" />
@@ -130,29 +130,29 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
                         </span>
                       )}
                     </div>
-                    <h2 className="text-xl font-bold text-foreground">{displayTitle}</h2>
+                    <h2 className="text-lg font-bold leading-tight text-foreground sm:text-xl">{displayTitle}</h2>
                   </div>
                   <button
                     onClick={() => onOpenChange(false)}
-                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted"
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted sm:p-2"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
-                    <Target className="mt-0.5 h-4 w-4 text-primary" />
-                    <p>{displaySubtitle}</p>
+                  <div className="hidden items-start gap-2 rounded-lg bg-muted/40 p-2 text-xs text-muted-foreground sm:flex sm:p-3 sm:text-sm">
+                    <Target className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <p className="line-clamp-2">{displaySubtitle}</p>
                   </div>
 
-                  <div className="rounded-full bg-surface/70 p-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-surface/70 p-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
+                    <div className="flex items-center gap-1 sm:gap-2">
                       <button
                         type="button"
                         onClick={() => setPanel('conteudo')}
                         className={cn(
-                          'flex-1 rounded-full px-3 py-2 text-center transition-colors',
+                          'flex-1 rounded-full px-2 py-1.5 text-center transition-colors sm:px-3 sm:py-2',
                           panel === 'conteudo' && 'bg-background text-foreground shadow-sm'
                         )}
                       >
@@ -162,7 +162,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
                         type="button"
                         onClick={() => setPanel('execucao')}
                         className={cn(
-                          'flex-1 rounded-full px-3 py-2 text-center transition-colors',
+                          'flex-1 rounded-full px-2 py-1.5 text-center transition-colors sm:px-3 sm:py-2',
                           panel === 'execucao' && 'bg-background text-foreground shadow-sm'
                         )}
                       >
@@ -173,7 +173,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
                 </div>
               </div>
 
-              <div className="modal-body space-y-4">
+              <div className="modal-body flex-1 space-y-4">
                 {panel === 'conteudo' && (
                   <DayModalContent dayId={dayId} />
                 )}
@@ -199,11 +199,6 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
                     {phase === 'crud' && (
                       <div className="space-y-6">
                         <CrudSection type={config.crudType as CrudType} />
-                        <div className="flex justify-end">
-                          <Button className="btn-fire" onClick={handleCrudComplete} disabled={saving}>
-                            {saving ? 'Salvando...' : 'Concluir dia'}
-                          </Button>
-                        </div>
                       </div>
                     )}
 
@@ -213,6 +208,15 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
                   </>
                 )}
               </div>
+
+              {/* Footer fixo para o botão no mobile */}
+              {panel === 'execucao' && phase === 'crud' && (
+                <div className="sticky bottom-0 border-t border-border/50 bg-popover/95 p-4 backdrop-blur-sm">
+                  <Button className="btn-fire w-full sm:w-auto sm:ml-auto sm:block" onClick={handleCrudComplete} disabled={saving}>
+                    {saving ? 'Salvando...' : 'Concluir dia'}
+                  </Button>
+                </div>
+              )}
             </div>
           </motion.div>
         </>
