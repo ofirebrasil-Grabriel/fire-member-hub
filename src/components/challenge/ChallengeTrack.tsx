@@ -224,7 +224,7 @@ export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
               viewport={{ once: true, amount: 0.2 }}
             >
               {items.map((item, index) => {
-                const isLeft = index % 2 === 0;
+                const isLeft = index % 2 !== 0;
                 const cardY = startY + index * stepY;
                 return (
                   <motion.div
@@ -232,11 +232,11 @@ export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
                     variants={itemVariants}
                     className="absolute"
                     style={{
-                      left: '50%',
+                      ...(isLeft
+                        ? { right: '50%', marginRight: bubbleOffset }
+                        : { left: '50%', marginLeft: bubbleOffset }),
                       top: cardY,
-                      transform: isLeft
-                        ? `translate(calc(-100% - ${bubbleOffset}px), -50%)`
-                        : `translate(${bubbleOffset}px, -50%)`,
+                      transform: 'translateY(-50%)',
                     }}
                   >
                     <TrackPathCard
