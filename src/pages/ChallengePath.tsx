@@ -162,48 +162,69 @@ const ChallengePath = () => {
               </div>
             </div>
 
-            <div className="glass-card flex h-full flex-col gap-4 p-4 md:p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Seu progresso</p>
-                  <p className="text-[11px] text-muted-foreground">Acompanhe a evolução</p>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => setLibraryOpen(true)}>
-                  <BookOpen className="h-4 w-4" />
-                  Biblioteca
-                </Button>
+            <div className="glass-card flex h-full flex-col gap-6 p-5 md:p-7">
+              <div className="text-center">
+                <p className="text-[22px] font-bold tracking-tight">Seu progresso</p>
+                <p className="text-[14px] text-muted-foreground  tracking-wider font-medium">Acompanhe a evolução</p>
               </div>
-              <div className="flex items-center justify-center">
-                <div
-                  className="relative h-24 w-24 rounded-full p-[3px]"
-                  style={{
-                    background: `conic-gradient(hsl(var(--primary)) ${progressPercent}%, hsl(var(--muted)) ${progressPercent}% 100%)`,
-                  }}
-                >
-                  <div className="absolute inset-[4px] flex flex-col items-center justify-center rounded-full bg-background text-sm font-semibold">
-                    <span className="text-base">{progressPercent}%</span>
-                    <span className="text-[11px] text-muted-foreground">concluido</span>
+
+              <div className="flex items-center justify-center gap-6 relative px-2">
+                {/* Lado Esquerdo: Gráfico Circular (Atrás) */}
+                <div className="shrink-0 relative z-0">
+                  <div
+                    className="relative h-36 w-36 rounded-full p-[6px] shadow-glow-sm border border-white/10"
+                    style={{
+                      background: `conic-gradient(hsl(var(--primary)) 0% ${progressPercent}%, hsl(var(--muted)/0.2) ${progressPercent}% 100%)`,
+                    }}
+                  >
+                    <div className="absolute inset-[6px] flex flex-col items-center justify-center rounded-full bg-background/80 backdrop-blur-md">
+                      <span className="text-3xl font-black text-fire">{progressPercent}%</span>
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">meta</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lado Direito: Card de Status (Reduzido) */}
+                <div className="relative z-10 -ml-2 w-32">
+                  <div className="flex flex-col items-center justify-right rounded-xl border border-white/20 bg-white/10 p-3 text-center backdrop-blur-xl shadow-2xl ring-1 ring-black/20">
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-3xl font-black text-foreground">{completedCount}</span>
+                      <span className="text-muted-foreground/60 font-medium text-xs">/</span>
+                      <span className="text-base font-bold text-muted-foreground/60">{totalDays}</span>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mt-0.5">Dias</p>
+
+                    <div className="mt-2 w-full border-t border-white/10 pt-2">
+                      <p className="text-[14px] font-bold text-primary/90 italic whitespace-nowrap">
+                        {daysRemaining} restantes
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl border border-border/60 bg-surface/60 p-3">
-                  <p className="text-xs text-muted-foreground">Concluidos</p>
-                  <p className="text-base font-semibold">{completedCount}</p>
-                </div>
-                <div className="rounded-xl border border-border/60 bg-surface/60 p-3">
-                  <p className="text-xs text-muted-foreground">Restantes</p>
-                  <p className="text-base font-semibold">{daysRemaining}</p>
-                </div>
-              </div>
+
+              <button
+                className="btn-fire-3d w-full flex items-center justify-center gap-2 mt-auto h-12"
+                onClick={() => setLibraryOpen(true)}
+              >
+                <BookOpen className="h-5 w-5" />
+                <span>Biblioteca</span>
+              </button>
             </div>
           </div>
         </div>
 
-        <div>
-          <h3 className="text-base font-semibold">Sua jornada</h3>
-          <p className="text-sm text-muted-foreground/90">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary mb-2">
+            <Sparkles className="h-3.5 w-3.5" />
+            Trilha de Evolução
+          </div>
+          <h3 className="text-3xl font-extrabold tracking-tight md:text-5xl">
+            Sua jornada
+          </h3>
+          <p className="text-sm text-muted-foreground/90 md:text-base max-w-xl mx-auto leading-relaxed">
             Cada etapa foi desenhada para destravar a próxima com clareza.
+            Siga o caminho e acompanhe seu progresso real.
           </p>
         </div>
 
