@@ -1,4 +1,4 @@
-import { Trophy, Target, Calendar, Zap } from 'lucide-react';
+import { Calendar, Target, Trophy, Zap } from 'lucide-react';
 import { useUserProgress } from '@/contexts/UserProgressContext';
 import { useDays } from '@/hooks/useDays';
 
@@ -8,47 +8,40 @@ export const StatsCards = () => {
   const totalDays = days.length || 15;
   
   const completedDays = getCompletedDaysCount();
-  const totalTasks = Object.values(progress.daysProgress).reduce(
-    (acc, day) => acc + (day.completedTasks?.length || 0), 
-    0
-  );
-  
-  const daysSinceStart = Math.floor(
-    (new Date().getTime() - new Date(progress.startedAt).getTime()) / (1000 * 60 * 60 * 24)
-  ) + 1;
-  
-  const streak = completedDays; // Simplified streak calculation
+  const currentDay = totalDays > 0 ? Math.min(progress.currentDay, totalDays) : progress.currentDay;
+  const remainingDays = Math.max(totalDays - completedDays, 0);
+  const percentage = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
 
   const stats = [
     {
       icon: Trophy,
-      label: 'Dias Completos',
+      label: 'Dias completos',
       value: completedDays,
       suffix: `/${totalDays}`,
       color: 'text-success',
       bgColor: 'bg-success/10',
     },
     {
-      icon: Target,
-      label: 'Tarefas Feitas',
-      value: totalTasks,
-      suffix: '',
+      icon: Calendar,
+      label: 'Dia atual',
+      value: currentDay,
+      suffix: `/${totalDays}`,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
     },
     {
-      icon: Calendar,
-      label: 'Dias no Desafio',
-      value: daysSinceStart,
-      suffix: '',
-      color: 'text-warning',
-      bgColor: 'bg-warning/10',
+      icon: Target,
+      label: 'Dias restantes',
+      value: remainingDays,
+      suffix: ' dias',
+      color: 'text-muted-foreground',
+      bgColor: 'bg-surface/70',
     },
     {
       icon: Zap,
-      label: 'Sequência',
-      value: streak,
-      suffix: ' dias',
+      label: 'Progresso geral',
+      value: percentage,
+      suffix: '%',
       color: 'text-fire',
       bgColor: 'bg-fire/10',
     },

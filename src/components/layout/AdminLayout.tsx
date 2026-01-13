@@ -5,6 +5,7 @@ import {
   LayoutDashboard, 
   Users, 
   Calendar, 
+  BookOpen,
   Settings, 
   Webhook,
   Menu,
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/admin/users', icon: Users, label: 'Usuários' },
   { to: '/admin/challenges', icon: Calendar, label: 'Desafio' },
+  { to: '/admin/library', icon: BookOpen, label: 'Biblioteca' },
   { to: '/admin/webhooks', icon: Webhook, label: 'Webhooks' },
   { to: '/admin/settings', icon: Settings, label: 'Configurações' },
 ];

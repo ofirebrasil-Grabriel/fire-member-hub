@@ -6,10 +6,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UserProgressProvider } from "@/contexts/UserProgressContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import Dashboard from "./pages/Dashboard";
 import DayPage from "./pages/DayPage";
 import ChallengePath from "./pages/ChallengePath";
-import Resources from "./pages/Resources";
+import Library from "./pages/Library";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -20,6 +19,7 @@ import { AdminChallenges } from "./pages/admin/AdminChallenges";
 import { ChallengeEditor } from "./pages/admin/ChallengeEditor";
 import { AdminSettings } from "./pages/admin/AdminSettings";
 import { AdminWebhooks } from "./pages/admin/AdminWebhooks";
+import { AdminLibrary } from "./pages/admin/AdminLibrary";
 
 const queryClient = new QueryClient();
 
@@ -64,11 +64,12 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-    <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
     <Route path="/app" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
     <Route path="/desafio" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
     <Route path="/dia/:id" element={<ProtectedRoute><DayPage /></ProtectedRoute>} />
-    <Route path="/recursos" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+    <Route path="/biblioteca" element={<ProtectedRoute><Library /></ProtectedRoute>} />
+    <Route path="/recursos" element={<Navigate to="/biblioteca" replace />} />
     <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     
     {/* Admin routes with sidebar layout */}
@@ -77,6 +78,7 @@ const AppRoutes = () => (
       <Route path="users" element={<AdminUsers />} />
       <Route path="challenges" element={<AdminChallenges />} />
       <Route path="challenges/:id" element={<ChallengeEditor />} />
+      <Route path="library" element={<AdminLibrary />} />
       <Route path="webhooks" element={<AdminWebhooks />} />
       <Route path="settings" element={<AdminSettings />} />
     </Route>

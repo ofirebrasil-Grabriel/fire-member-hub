@@ -136,6 +136,39 @@ export type Database = {
         }
         Relationships: []
       }
+      library_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          group_label: string | null
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          group_label?: string | null
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          group_label?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       calendar_items: {
         Row: {
           created_at: string | null

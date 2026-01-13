@@ -1,11 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Flame, FolderOpen, User } from 'lucide-react';
+import { Flame, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Flame, label: 'Desafio', path: '/app' },
-  { icon: FolderOpen, label: 'Recursos', path: '/recursos' },
+  { icon: Flame, label: 'Desafio', path: '/' },
   { icon: User, label: 'Perfil', path: '/perfil' },
 ];
 
@@ -16,8 +14,13 @@ export const MobileNav = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-sidebar/95 backdrop-blur-xl border-t border-sidebar-border z-50 md:hidden">
       <div className="flex items-center justify-around py-2 px-4">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (item.path === '/app' && (location.pathname.startsWith('/app') || location.pathname.startsWith('/dia/')));
+          const isChallengeRoute = item.path === '/';
+          const isActive = isChallengeRoute
+            ? location.pathname === '/' ||
+              location.pathname.startsWith('/app') ||
+              location.pathname.startsWith('/desafio') ||
+              location.pathname.startsWith('/dia/')
+            : location.pathname.startsWith(item.path);
           
           return (
             <Link

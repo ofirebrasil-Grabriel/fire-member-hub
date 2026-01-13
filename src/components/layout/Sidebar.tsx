@@ -1,11 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
+import {
   Flame,
-  FolderOpen, 
-  User, 
+  User,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -14,9 +11,7 @@ import { useState } from 'react';
 import { useUserProgress } from '@/contexts/UserProgressContext';
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Flame, label: 'Desafio', path: '/app' },
-  { icon: FolderOpen, label: 'Recursos', path: '/recursos' },
+  { icon: Flame, label: 'Desafio', path: '/' },
   { icon: User, label: 'Perfil', path: '/perfil' },
   { icon: Settings, label: 'Admin', path: '/admin' },
 ];
@@ -35,16 +30,12 @@ export const Sidebar = () => {
     >
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-fire flex items-center justify-center shadow-fire">
-            <img src="/favicon-v2.svg" alt="FIRE" className="h-6 w-6" />
-          </div>
-          {!collapsed && (
-            <div className="animate-fade-in">
-              <h1 className="font-bold text-lg text-foreground">FIRE</h1>
-              <p className="text-xs text-muted-foreground">15 Dias</p>
-            </div>
-          )}
+        <Link to="/" className="flex w-full items-center justify-center">
+          <img
+            src="/logo.svg"
+            alt="FIRE"
+            className="h-14 w-auto"
+          />
         </Link>
       </div>
 
@@ -69,8 +60,13 @@ export const Sidebar = () => {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (item.path === '/app' && (location.pathname.startsWith('/app') || location.pathname.startsWith('/dia/')));
+          const isChallengeRoute = item.path === '/';
+          const isActive = isChallengeRoute
+            ? location.pathname === '/' ||
+              location.pathname.startsWith('/app') ||
+              location.pathname.startsWith('/desafio') ||
+              location.pathname.startsWith('/dia/')
+            : location.pathname.startsWith(item.path);
           
           return (
             <Link

@@ -46,7 +46,7 @@ const DayPage = () => {
           <h1 className="text-2xl font-bold mb-4">Dia não encontrado</h1>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Link to="/" className="text-primary hover:underline">
-            Voltar ao Dashboard
+            Voltar ao Desafio
           </Link>
         </div>
       </Layout>
