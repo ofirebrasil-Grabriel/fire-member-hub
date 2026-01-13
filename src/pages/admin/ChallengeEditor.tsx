@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { LUCIDE_ICON_OPTIONS } from '@/components/icons/lucideIconMap';
 
 interface TaskStep {
   id: string;
@@ -26,6 +27,7 @@ interface DayData {
   title: string;
   subtitle: string;
   emoji: string;
+  icon_name: string | null;
   morning_message: string | null;
   morning_audio_url: string | null;
   concept: string | null;
@@ -84,6 +86,7 @@ export const ChallengeEditor = () => {
 
     setDay({
       ...data,
+      icon_name: data.icon_name ?? null,
       task_steps: Array.isArray(data.task_steps) ? (data.task_steps as unknown as TaskStep[]) : [],
       tools: parsedTools,
       reflection_questions: Array.isArray(data.reflection_questions) ? (data.reflection_questions as unknown as string[]) : [],
@@ -265,6 +268,7 @@ export const ChallengeEditor = () => {
         title: day.title,
         subtitle: day.subtitle,
         emoji: day.emoji,
+        icon_name: day.icon_name,
         morning_message: day.morning_message,
         morning_audio_url: day.morning_audio_url,
         concept: day.concept,
@@ -328,8 +332,8 @@ export const ChallengeEditor = () => {
               <FileText size={20} className="text-primary" /> Dados do Dia
             </h2>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="col-span-2">
                 <label className="text-sm font-medium text-muted-foreground">Título</label>
                 <Input
                   value={day.title}
@@ -338,12 +342,19 @@ export const ChallengeEditor = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Emoji</label>
-                <Input
-                  value={day.emoji}
-                  onChange={(e) => handleChange('emoji', e.target.value)}
-                  className="mt-1 w-20"
-                />
+                <label className="text-sm font-medium text-muted-foreground">Ícone (Lucide)</label>
+                <select
+                  value={day.icon_name ?? ''}
+                  onChange={(e) => handleChange('icon_name', e.target.value || null)}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                >
+                  <option value="">Sem ícone</option>
+                  {LUCIDE_ICON_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

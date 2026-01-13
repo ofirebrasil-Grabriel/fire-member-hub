@@ -75,6 +75,7 @@ export type Database = {
           description: string | null
           emoji: string | null
           expected_result: string | null
+          icon_name: string | null
           id: number
           morning_audio_url: string | null
           morning_message: string | null
@@ -98,6 +99,7 @@ export type Database = {
           description?: string | null
           emoji?: string | null
           expected_result?: string | null
+          icon_name?: string | null
           id?: number
           morning_audio_url?: string | null
           morning_message?: string | null
@@ -121,6 +123,7 @@ export type Database = {
           description?: string | null
           emoji?: string | null
           expected_result?: string | null
+          icon_name?: string | null
           id?: number
           morning_audio_url?: string | null
           morning_message?: string | null
