@@ -112,8 +112,9 @@ export const AudioExpandableCard = ({
     <div className="glass-card overflow-hidden">
       {audioUrl && <audio ref={audioRef} src={audioUrl} preload="metadata" />}
       {/* Header with audio controls */}
-      <div className="p-6">
-        <div className="flex items-center justify-between gap-4">
+      <div className="p-4 sm:p-6">
+        {/* Desktop layout */}
+        <div className="hidden sm:flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', iconBgClass)}>
               {emoji ? <span className="text-xl">{emoji}</span> : icon}
@@ -181,6 +182,79 @@ export const AudioExpandableCard = ({
                 <ChevronDown className="w-5 h-5" />
               )}
             </button>
+          </div>
+        </div>
+
+        {/* Mobile layout */}
+        <div className="flex flex-col gap-3 sm:hidden">
+          {/* Linha 1: Ícone + Título */}
+          <div className="flex items-center gap-3">
+            <div className={cn('w-9 h-9 shrink-0 rounded-xl flex items-center justify-center', iconBgClass)}>
+              {emoji ? <span className="text-lg">{emoji}</span> : icon}
+            </div>
+            <h2 className="font-semibold text-base leading-tight">{title}</h2>
+          </div>
+
+          {/* Linha 2: Subtítulo */}
+          {subtitle && (
+            <p className="text-sm text-muted-foreground leading-snug">{subtitle}</p>
+          )}
+
+          {/* Linha 3: Botões */}
+          <div className="flex items-center gap-2">
+            {audioUrl ? (
+              <>
+                <Button onClick={handlePlayPause} className="btn-fire h-10 flex-1">
+                  {isPlaying ? (
+                    <>
+                      <Pause className="w-4 h-4" />
+                      Pausar
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4" />
+                      Ouvir
+                    </>
+                  )}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="sm" className="h-10 px-3">
+                      <Gauge className="h-4 w-4" />
+                      {playbackRate}x
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[7rem]">
+                    <DropdownMenuRadioGroup
+                      value={String(playbackRate)}
+                      onValueChange={(value) => setPlaybackRate(Number(value))}
+                    >
+                      {playbackOptions.map((rate) => (
+                        <DropdownMenuRadioItem key={rate} value={String(rate)}>
+                          {rate}x
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-2 rounded-lg bg-surface hover:bg-surface-hover transition-colors shrink-0"
+                  aria-label={isExpanded ? 'Recolher texto' : 'Expandir texto'}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg bg-surface text-muted-foreground">
+                <Volume2 className="w-4 h-4" />
+                <span className="text-sm">Áudio em breve</span>
+              </div>
+            )}
           </div>
         </div>
 
