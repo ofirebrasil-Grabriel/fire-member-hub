@@ -8,9 +8,13 @@ import { useUserProgress } from '@/contexts/UserProgressContext';
 import { Loader2 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { progress } = useUserProgress();
+  const { progress, getCompletedDaysCount } = useUserProgress();
   const { days, loading } = useDays();
   const totalDays = days.length || 15;
+  const completedDays = getCompletedDaysCount();
+  const currentDay = totalDays > 0 ? Math.min(progress.currentDay, totalDays) : progress.currentDay;
+  const remainingDays = Math.max(totalDays - completedDays, 0);
+  const progressPercent = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
 
   return (
     <Layout>
@@ -31,18 +35,22 @@ const Dashboard = () => {
               
               <div className="mt-6 w-full">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Dia Atual</span>
-                  <span className="font-semibold text-fire">{progress.currentDay}</span>
+                  <span className="text-muted-foreground">Progresso geral</span>
+                  <span className="font-semibold text-fire">{progressPercent}%</span>
+                </div>
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Dia atual</span>
+                  <span className="font-semibold">{currentDay}/{totalDays}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Meta</span>
-                  <span className="font-semibold">{totalDays} dias</span>
+                  <span className="text-muted-foreground">Dias restantes</span>
+                  <span className="font-semibold">{remainingDays}</span>
                 </div>
               </div>
               
               <div className="mt-6 p-4 bg-surface/50 rounded-xl w-full">
                 <p className="text-xs text-muted-foreground text-center">
-                  💡 Complete as tarefas do dia para desbloquear o próximo
+                  💡 Complete o dia atual para desbloquear o próximo
                 </p>
               </div>
             </div>
