@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { 
   Search, Shield, User, Ban, CheckCircle, Clock, Mail, 
   ChevronLeft, ChevronRight, Eye, Trash2, Plus, X, Phone, Lock, Loader2, KeyRound 
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import type { Tables } from '@/integrations/supabase/types';
 
 interface UserProfile {
   id: string;
@@ -51,14 +52,7 @@ export const AdminUsers = () => {
   const [newPassword, setNewPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loadUsers();
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [page, searchTerm]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     
     let query = supabase
@@ -92,9 +86,13 @@ export const AdminUsers = () => {
       .select('user_id, role')
       .in('user_id', userIds);
 
-    const usersWithDetails: UserProfile[] = (profiles || []).map((profile: any) => {
-      const sub = subscriptions?.find(s => s.user_id === profile.id);
-      const userRole = roles?.find(r => r.user_id === profile.id);
+    const profilesData = (profiles || []) as Tables<'profiles'>[];
+    const subscriptionsData = (subscriptions || []) as Tables<'subscriptions'>[];
+    const rolesData = (roles || []) as Tables<'user_roles'>[];
+
+    const usersWithDetails: UserProfile[] = profilesData.map((profile) => {
+      const sub = subscriptionsData.find((item) => item.user_id === profile.id);
+      const userRole = rolesData.find((item) => item.user_id === profile.id);
       
       let status: 'active' | 'blocked' | 'pending' = 'pending';
       if (sub?.status === 'active') status = 'active';
@@ -114,7 +112,14 @@ export const AdminUsers = () => {
     setUsers(usersWithDetails);
     setTotalCount(count || 0);
     setLoading(false);
-  };
+  }, [page, searchTerm]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadUsers();
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [loadUsers]);
 
   const handleStatusChange = async (userId: string, newStatus: 'active' | 'blocked') => {
     setActionLoading(userId);
@@ -160,8 +165,9 @@ export const AdminUsers = () => {
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
         toast({ title: `Usuário ${newStatus === 'active' ? 'ativado' : 'bloqueado'}!` });
       }
-    } catch (err: any) {
-      toast({ title: 'Erro ao atualizar status', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Erro ao atualizar status', description: message, variant: 'destructive' });
     }
     
     setActionLoading(null);
@@ -210,8 +216,9 @@ export const AdminUsers = () => {
       
       setUsers(prev => prev.filter(u => u.id !== userId));
       toast({ title: 'Usuário excluído!' });
-    } catch (error: any) {
-      toast({ title: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado';
+      toast({ title: message, variant: 'destructive' });
     }
     
     setActionLoading(null);
@@ -272,8 +279,9 @@ export const AdminUsers = () => {
       toast({ title: 'Senha atualizada com sucesso!' });
       setShowPasswordModal(false);
       setNewPassword('');
-    } catch (error: any) {
-      toast({ title: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado';
+      toast({ title: message, variant: 'destructive' });
     } finally {
       setPasswordLoading(false);
     }
@@ -315,8 +323,9 @@ export const AdminUsers = () => {
 
       setShowModal(false);
       loadUsers();
-    } catch (error: any) {
-      toast({ title: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado';
+      toast({ title: message, variant: 'destructive' });
     } finally {
       setModalLoading(false);
     }

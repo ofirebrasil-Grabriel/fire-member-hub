@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+type SupabaseClient = ReturnType<typeof createClient>;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-hotmart-hottok',
@@ -236,7 +238,12 @@ Deno.serve(async (req) => {
   }
 });
 
-async function updateWebhookLog(supabase: any, logId: string | undefined, statusCode: number, response: any) {
+async function updateWebhookLog(
+  supabase: SupabaseClient,
+  logId: string | undefined,
+  statusCode: number,
+  response: Record<string, unknown>
+) {
   if (!logId) return;
   await supabase
     .from('webhook_logs')

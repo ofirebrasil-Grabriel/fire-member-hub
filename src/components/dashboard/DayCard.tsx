@@ -99,7 +99,7 @@ export const DayCard = ({ day }: DayCardProps) => {
   }
 
   return (
-    <Link to={`/dia/${day.id}`} className="block group">
+    <Link to={`/app?day=${day.id}`} className="block group">
       {cardContent}
     </Link>
   );

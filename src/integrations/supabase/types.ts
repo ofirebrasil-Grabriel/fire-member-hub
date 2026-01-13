@@ -24,6 +24,7 @@ export type Database = {
           diary_entry: string | null
           id: string
           mood: string | null
+          payload: Json | null
           updated_at: string | null
           user_id: string | null
         }
@@ -36,6 +37,7 @@ export type Database = {
           diary_entry?: string | null
           id?: string
           mood?: string | null
+          payload?: Json | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -48,6 +50,7 @@ export type Database = {
           diary_entry?: string | null
           id?: string
           mood?: string | null
+          payload?: Json | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -132,6 +135,334 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      calendar_items: {
+        Row: {
+          created_at: string | null
+          due_date: string | null
+          id: string
+          is_critical: boolean | null
+          is_fixed: boolean | null
+          source_debt_id: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_critical?: boolean | null
+          is_fixed?: boolean | null
+          source_debt_id?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_critical?: boolean | null
+          is_fixed?: boolean | null
+          source_debt_id?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_items_source_debt_id_fkey"
+            columns: ["source_debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      card_policy: {
+        Row: {
+          blocked_categories: string[] | null
+          created_at: string | null
+          id: string
+          installment_rule: string | null
+          updated_at: string | null
+          user_id: string
+          weekly_limit: number | null
+        }
+        Insert: {
+          blocked_categories?: string[] | null
+          created_at?: string | null
+          id?: string
+          installment_rule?: string | null
+          updated_at?: string | null
+          user_id: string
+          weekly_limit?: number | null
+        }
+        Update: {
+          blocked_categories?: string[] | null
+          created_at?: string | null
+          id?: string
+          installment_rule?: string | null
+          updated_at?: string | null
+          user_id?: string
+          weekly_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_policy_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cuts: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          estimated_value: number | null
+          id: string
+          item: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          estimated_value?: number | null
+          id?: string
+          item: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          estimated_value?: number | null
+          id?: string
+          item?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debts: {
+        Row: {
+          created_at: string | null
+          creditor: string
+          due_day: number | null
+          id: string
+          installment_value: number | null
+          is_critical: boolean | null
+          status: string
+          total_balance: number | null
+          type: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          creditor: string
+          due_day?: number | null
+          id?: string
+          installment_value?: number | null
+          is_critical?: boolean | null
+          status?: string
+          total_balance?: number | null
+          type?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          creditor?: string
+          due_day?: number | null
+          id?: string
+          installment_value?: number | null
+          is_critical?: boolean | null
+          status?: string
+          total_balance?: number | null
+          type?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_budget: {
+        Row: {
+          created_at: string | null
+          essentials: Json | null
+          gap: number | null
+          id: string
+          income: number | null
+          minimum_debts: number | null
+          month_year: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          essentials?: Json | null
+          gap?: number | null
+          id?: string
+          income?: number | null
+          minimum_debts?: number | null
+          month_year: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          essentials?: Json | null
+          gap?: number | null
+          id?: string
+          income?: number | null
+          minimum_debts?: number | null
+          month_year?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_budget_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiations: {
+        Row: {
+          channel: string | null
+          created_at: string | null
+          creditor: string
+          debt_id: string | null
+          id: string
+          max_entry: number | null
+          max_installment: number | null
+          notes: string | null
+          response: string | null
+          script_used: boolean | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string | null
+          creditor: string
+          debt_id?: string | null
+          id?: string
+          max_entry?: number | null
+          max_installment?: number | null
+          notes?: string | null
+          response?: string | null
+          script_used?: boolean | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string | null
+          creditor?: string
+          debt_id?: string | null
+          id?: string
+          max_entry?: number | null
+          max_installment?: number | null
+          notes?: string | null
+          response?: string | null
+          script_used?: boolean | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiations_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_306090: {
+        Row: {
+          created_at: string | null
+          goals_30: string[] | null
+          goals_60: string[] | null
+          goals_90: string[] | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          goals_30?: string[] | null
+          goals_60?: string[] | null
+          goals_90?: string[] | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          goals_30?: string[] | null
+          goals_60?: string[] | null
+          goals_90?: string[] | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_306090_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -234,6 +565,50 @@ export type Database = {
           },
         ]
       }
+      user_profile: {
+        Row: {
+          anxiety_score: number | null
+          clarity_score: number | null
+          created_at: string | null
+          fixed_time: string | null
+          id: string
+          no_new_debt_commitment: boolean | null
+          sources: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          anxiety_score?: number | null
+          clarity_score?: number | null
+          created_at?: string | null
+          fixed_time?: string | null
+          id?: string
+          no_new_debt_commitment?: boolean | null
+          sources?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          anxiety_score?: number | null
+          clarity_score?: number | null
+          created_at?: string | null
+          fixed_time?: string | null
+          id?: string
+          no_new_debt_commitment?: boolean | null
+          sources?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profile_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -254,6 +629,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      weekly_ritual: {
+        Row: {
+          checklist: Json | null
+          created_at: string | null
+          day_of_week: number | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          checklist?: Json | null
+          created_at?: string | null
+          day_of_week?: number | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          checklist?: Json | null
+          created_at?: string | null
+          day_of_week?: number | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_ritual_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_logs: {
         Row: {

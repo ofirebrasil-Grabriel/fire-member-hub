@@ -11,8 +11,8 @@ interface ChallengeDay {
   title: string;
   subtitle: string;
   emoji: string;
-  task_steps: any[];
-  tools: string[];
+  task_steps: unknown[];
+  tools: unknown[];
 }
 
 export const AdminChallenges = () => {
@@ -35,10 +35,10 @@ export const AdminChallenges = () => {
     if (error) {
       console.error('Error fetching days:', error);
     } else {
-      setDays((data || []).map((d: any) => ({
-        ...d,
-        task_steps: Array.isArray(d.task_steps) ? d.task_steps : [],
-        tools: Array.isArray(d.tools) ? d.tools : [],
+      setDays((data || []).map((day) => ({
+        ...day,
+        task_steps: Array.isArray(day.task_steps) ? day.task_steps : [],
+        tools: Array.isArray(day.tools) ? day.tools : [],
       })));
     }
     setLoading(false);

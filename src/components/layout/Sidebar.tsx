@@ -15,7 +15,7 @@ import { useUserProgress } from '@/contexts/UserProgressContext';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Flame, label: 'Desafio', path: '/desafio' },
+  { icon: Flame, label: 'Desafio', path: '/app' },
   { icon: FolderOpen, label: 'Recursos', path: '/recursos' },
   { icon: User, label: 'Perfil', path: '/perfil' },
   { icon: Settings, label: 'Admin', path: '/admin' },
@@ -70,7 +70,7 @@ export const Sidebar = () => {
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path || 
-            (item.path === '/desafio' && location.pathname.startsWith('/dia/'));
+            (item.path === '/app' && (location.pathname.startsWith('/app') || location.pathname.startsWith('/dia/')));
           
           return (
             <Link

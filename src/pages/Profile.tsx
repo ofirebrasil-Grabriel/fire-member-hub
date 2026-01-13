@@ -4,6 +4,7 @@ import { useUserProgress } from '@/contexts/UserProgressContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { 
   User, 
   Mail, 
@@ -42,7 +43,7 @@ const Profile = () => {
   const [notifications, setNotifications] = useState(() => {
     return localStorage.getItem('fire-notifications') !== 'false';
   });
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<Tables<'subscriptions'> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -109,11 +110,13 @@ const Profile = () => {
       };
     }
 
-    const statusMap: Record<string, any> = {
+    const statusMap: Record<string, { label: string; color: string; description: string }> = {
       active: {
         label: 'Acesso Ativo',
         color: 'bg-success/10 border-success/30 text-success',
-        description: `Iniciado em ${new Date(subscription.started_at).toLocaleDateString('pt-BR')}`,
+        description: subscription?.started_at
+          ? `Iniciado em ${new Date(subscription.started_at).toLocaleDateString('pt-BR')}`
+          : 'Assinatura ativa.',
       },
       canceled: {
         label: 'Cancelado',
@@ -260,7 +263,10 @@ const Profile = () => {
                   <p className="text-sm text-muted-foreground">Escolha o visual da plataforma</p>
                 </div>
               </div>
-              <Select value={theme} onValueChange={(value: any) => setTheme(value)}>
+              <Select
+                value={theme}
+                onValueChange={(value) => setTheme(value as 'dark' | 'light' | 'high-contrast')}
+              >
                 <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>

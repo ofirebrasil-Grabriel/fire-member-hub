@@ -112,12 +112,17 @@ export const AdminDashboard = () => {
       .order('completed_at', { ascending: false })
       .limit(10);
 
-    const activityItems: ActivityItem[] = (progressData || []).map((p: any) => ({
-      id: p.id,
-      user_name: p.profiles?.full_name || 'Usuário',
-      day_number: p.day_id,
-      task_title: `Completou o Dia ${p.day_id}`,
-      completed_at: p.completed_at,
+    const activityItems: ActivityItem[] = (progressData || []).map((item: {
+      id: string;
+      day_id: number;
+      completed_at: string | null;
+      profiles?: { full_name?: string | null } | null;
+    }) => ({
+      id: item.id,
+      user_name: item.profiles?.full_name || 'Usuário',
+      day_number: item.day_id,
+      task_title: `Completou o Dia ${item.day_id}`,
+      completed_at: item.completed_at,
     }));
     setActivity(activityItems);
 

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface UserWithProgress {
   id: string;
@@ -18,14 +19,14 @@ export interface WebhookLog {
   event: string;
   status_code: number | null;
   received_at: string;
-  payload: any;
-  response: any;
+  payload: Json;
+  response: Json | null;
 }
 
 export interface Setting {
   id: string;
   key: string;
-  value: any;
+  value: Json;
   description: string | null;
 }
 
@@ -40,8 +41,8 @@ export interface DayContent {
   concept_title: string | null;
   concept_audio_url: string | null;
   task_title: string | null;
-  task_steps: any[];
-  tools: string[];
+  task_steps: unknown[];
+  tools: unknown[];
   reflection_questions: string[];
   commitment: string | null;
   next_day_preview: string | null;
@@ -86,7 +87,7 @@ export const useAdmin = () => {
   }, [user]);
 
   // Fetch users with their progress
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select('*')
@@ -104,7 +105,7 @@ export const useAdmin = () => {
 
     // Get day progress for each user
     const usersWithProgress: UserWithProgress[] = await Promise.all(
-      (profiles || []).map(async (profile: any) => {
+      (profiles || []).map(async (profile) => {
         const { data: progress } = await supabase
           .from('day_progress')
           .select('day_id')
@@ -129,10 +130,10 @@ export const useAdmin = () => {
     );
 
     setUsers(usersWithProgress);
-  };
+  }, []);
 
   // Fetch days content
-  const fetchDays = async () => {
+  const fetchDays = useCallback(async () => {
     const { data, error } = await supabase
       .from('days')
       .select('*')
@@ -143,19 +144,19 @@ export const useAdmin = () => {
       return;
     }
 
-    setDays((data || []).map((d: any) => ({
-      ...d,
-      task_steps: Array.isArray(d.task_steps) ? d.task_steps : [],
-      tools: Array.isArray(d.tools) ? d.tools : [],
-      reflection_questions: Array.isArray(d.reflection_questions) ? d.reflection_questions : [],
+    setDays((data || []).map((day) => ({
+      ...day,
+      task_steps: Array.isArray(day.task_steps) ? day.task_steps : [],
+      tools: Array.isArray(day.tools) ? day.tools : [],
+      reflection_questions: Array.isArray(day.reflection_questions) ? day.reflection_questions : [],
     })));
-  };
+  }, []);
 
   // Create new day
   const createDay = async (dayData: Partial<DayContent>) => {
     const { error } = await supabase
       .from('days')
-      .insert(dayData as any);
+      .insert(dayData);
 
     if (error) {
       console.error('Error creating day:', error);
@@ -170,7 +171,7 @@ export const useAdmin = () => {
   const updateDay = async (dayId: number, dayData: Partial<DayContent>) => {
     const { error } = await supabase
       .from('days')
-      .update(dayData as any)
+      .update(dayData)
       .eq('id', dayId);
 
     if (error) {
@@ -199,7 +200,7 @@ export const useAdmin = () => {
   };
 
   // Fetch webhook logs
-  const fetchWebhookLogs = async () => {
+  const fetchWebhookLogs = useCallback(async () => {
     const { data, error } = await supabase
       .from('webhook_logs')
       .select('*')
@@ -212,10 +213,10 @@ export const useAdmin = () => {
     }
 
     setWebhookLogs(data || []);
-  };
+  }, []);
 
   // Fetch settings
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     const { data, error } = await supabase
       .from('settings')
       .select('*')
@@ -227,10 +228,10 @@ export const useAdmin = () => {
     }
 
     setSettings(data || []);
-  };
+  }, []);
 
   // Create setting
-  const createSetting = async (key: string, value: any, description?: string) => {
+  const createSetting = async (key: string, value: Json, description?: string) => {
     const { error } = await supabase
       .from('settings')
       .insert({ key, value, description });
@@ -245,7 +246,7 @@ export const useAdmin = () => {
   };
 
   // Calculate stats
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     // Total users
     const { count: totalUsers } = await supabase
       .from('profiles')
@@ -282,7 +283,7 @@ export const useAdmin = () => {
       completionRate,
       webhooks24h: webhooks24h || 0,
     });
-  };
+  }, []);
 
   // Create new user
   const createUser = async (email: string, password: string, fullName: string) => {
@@ -355,7 +356,7 @@ export const useAdmin = () => {
   };
 
   // Update setting
-  const updateSetting = async (key: string, value: any) => {
+  const updateSetting = async (key: string, value: Json) => {
     const { error } = await supabase
       .from('settings')
       .update({ value, updated_at: new Date().toISOString() })
@@ -404,7 +405,7 @@ export const useAdmin = () => {
   };
 
   // Fetch all data
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     if (!isAdmin) return;
     
     await Promise.all([
@@ -414,13 +415,13 @@ export const useAdmin = () => {
       fetchStats(),
       fetchDays(),
     ]);
-  };
+  }, [isAdmin, fetchUsers, fetchWebhookLogs, fetchSettings, fetchStats, fetchDays]);
 
   useEffect(() => {
     if (isAdmin) {
       fetchAllData();
     }
-  }, [isAdmin]);
+  }, [isAdmin, fetchAllData]);
 
   return {
     isAdmin,

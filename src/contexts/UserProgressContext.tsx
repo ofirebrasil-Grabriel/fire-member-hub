@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Tables } from '@/integrations/supabase/types';
 
 interface DayProgress {
   completed: boolean;
@@ -6,6 +10,7 @@ interface DayProgress {
   mood?: string;
   diaryEntry?: string;
   completedAt?: string;
+  payload?: Record<string, unknown>;
 }
 
 interface UserProgress {
@@ -19,7 +24,7 @@ interface UserProgressContextType {
   progress: UserProgress;
   updateDayProgress: (dayId: number, updates: Partial<DayProgress>) => void;
   toggleTask: (dayId: number, taskId: string) => void;
-  completeDay: (dayId: number) => void;
+  completeDay: (dayId: number, payload?: Record<string, unknown>) => void;
   setUserName: (name: string) => void;
   getCompletedDaysCount: () => number;
   getProgressPercentage: () => number;
@@ -37,79 +42,185 @@ const defaultProgress: UserProgress = {
 const UserProgressContext = createContext<UserProgressContextType | undefined>(undefined);
 
 export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [progress, setProgress] = useState<UserProgress>(() => {
-    const saved = localStorage.getItem('fire-challenge-progress');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return defaultProgress;
-      }
-    }
-    return defaultProgress;
-  });
+  const { user } = useAuth();
+  const [progress, setProgress] = useState<UserProgress>(defaultProgress);
 
   useEffect(() => {
-    localStorage.setItem('fire-challenge-progress', JSON.stringify(progress));
-  }, [progress]);
+    if (!user?.id) {
+      setProgress(defaultProgress);
+      return;
+    }
 
-  const updateDayProgress = (dayId: number, updates: Partial<DayProgress>) => {
-    setProgress(prev => ({
-      ...prev,
-      daysProgress: {
-        ...prev.daysProgress,
-        [dayId]: {
-          ...prev.daysProgress[dayId],
-          completed: prev.daysProgress[dayId]?.completed || false,
-          completedTasks: prev.daysProgress[dayId]?.completedTasks || [],
-          ...updates,
-        },
+    let isActive = true;
+
+    const loadProgress = async () => {
+      const [profileResult, progressResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('full_name, created_at')
+          .eq('id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('day_progress')
+          .select('*')
+          .eq('user_id', user.id),
+      ]);
+
+      if (!isActive) return;
+
+      const profile = profileResult.data as Tables<'profiles'> | null;
+      const rows = (progressResult.data || []) as Tables<'day_progress'>[];
+
+      const daysProgress = rows.reduce<Record<number, DayProgress>>((acc, row) => {
+        acc[row.day_id] = {
+          completed: row.completed ?? false,
+          completedTasks: row.completed_tasks || [],
+          mood: row.mood || undefined,
+          diaryEntry: row.diary_entry || undefined,
+          completedAt: row.completed_at || undefined,
+          payload: row.payload || {},
+        };
+        return acc;
+      }, {});
+
+      const completedDayIds = rows.filter((row) => row.completed).map((row) => row.day_id);
+      const maxCompleted = completedDayIds.length ? Math.max(...completedDayIds) : 0;
+      const currentDay = Math.min(Math.max(1, maxCompleted + 1), 15);
+
+      setProgress({
+        currentDay,
+        daysProgress,
+        startedAt: profile?.created_at || new Date().toISOString(),
+        userName: profile?.full_name || 'Participante',
+      });
+    };
+
+    loadProgress();
+
+    return () => {
+      isActive = false;
+    };
+  }, [user?.id]);
+
+  const syncDayProgress = async (dayId: number, dayProgress: DayProgress) => {
+    if (!user?.id) return;
+    const { error } = await supabase.from('day_progress').upsert(
+      {
+        user_id: user.id,
+        day_id: dayId,
+        completed: dayProgress.completed,
+        completed_tasks: dayProgress.completedTasks,
+        mood: dayProgress.mood ?? null,
+        diary_entry: dayProgress.diaryEntry ?? null,
+        completed_at: dayProgress.completedAt ?? null,
+        payload: dayProgress.payload ?? {},
       },
-    }));
+      { onConflict: 'user_id,day_id' }
+    );
+
+    if (error) {
+      console.error('Erro ao sincronizar progresso:', error.message);
+    }
   };
 
-  const toggleTask = (dayId: number, taskId: string) => {
-    setProgress(prev => {
-      const dayProgress = prev.daysProgress[dayId] || { completed: false, completedTasks: [] };
-      const completedTasks = dayProgress.completedTasks.includes(taskId)
-        ? dayProgress.completedTasks.filter(id => id !== taskId)
-        : [...dayProgress.completedTasks, taskId];
-      
-      return {
+  const updateDayProgress = (dayId: number, updates: Partial<DayProgress>) => {
+    setProgress((prev) => {
+      const current = prev.daysProgress[dayId] || {
+        completed: false,
+        completedTasks: [],
+        payload: {},
+      };
+
+      const nextDayProgress: DayProgress = {
+        ...current,
+        ...updates,
+        completedTasks: updates.completedTasks ?? current.completedTasks ?? [],
+        payload: updates.payload ?? current.payload ?? {},
+      };
+
+      const nextProgress = {
         ...prev,
         daysProgress: {
           ...prev.daysProgress,
-          [dayId]: {
-            ...dayProgress,
-            completedTasks,
-          },
+          [dayId]: nextDayProgress,
         },
       };
+
+      void syncDayProgress(dayId, nextDayProgress);
+      return nextProgress;
     });
   };
 
-  const completeDay = (dayId: number) => {
-    setProgress(prev => ({
-      ...prev,
-      currentDay: Math.max(prev.currentDay, dayId + 1),
-      daysProgress: {
-        ...prev.daysProgress,
-        [dayId]: {
-          ...prev.daysProgress[dayId],
-          completed: true,
-          completedAt: new Date().toISOString(),
-          completedTasks: prev.daysProgress[dayId]?.completedTasks || [],
+  const toggleTask = (dayId: number, taskId: string) => {
+    setProgress((prev) => {
+      const current = prev.daysProgress[dayId] || { completed: false, completedTasks: [], payload: {} };
+      const completedTasks = current.completedTasks.includes(taskId)
+        ? current.completedTasks.filter((id) => id !== taskId)
+        : [...current.completedTasks, taskId];
+
+      const nextDayProgress = {
+        ...current,
+        completedTasks,
+      };
+
+      const nextProgress = {
+        ...prev,
+        daysProgress: {
+          ...prev.daysProgress,
+          [dayId]: nextDayProgress,
         },
-      },
-    }));
+      };
+
+      void syncDayProgress(dayId, nextDayProgress);
+      return nextProgress;
+    });
+  };
+
+  const completeDay = (dayId: number, payload?: Record<string, unknown>) => {
+    setProgress((prev) => {
+      const current = prev.daysProgress[dayId] || { completed: false, completedTasks: [], payload: {} };
+      const completedAt = new Date().toISOString();
+      const nextDayProgress = {
+        ...current,
+        completed: true,
+        completedAt,
+        payload: payload ?? current.payload ?? {},
+        completedTasks: current.completedTasks || [],
+      };
+
+      const nextCurrentDay = Math.min(Math.max(prev.currentDay, dayId + 1), 15);
+
+      const nextProgress = {
+        ...prev,
+        currentDay: nextCurrentDay,
+        daysProgress: {
+          ...prev.daysProgress,
+          [dayId]: nextDayProgress,
+        },
+      };
+
+      void syncDayProgress(dayId, nextDayProgress);
+      return nextProgress;
+    });
   };
 
   const setUserName = (name: string) => {
-    setProgress(prev => ({ ...prev, userName: name }));
+    setProgress((prev) => ({ ...prev, userName: name }));
+    if (user?.id) {
+      supabase
+        .from('profiles')
+        .update({ full_name: name })
+        .eq('id', user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Erro ao atualizar nome:', error.message);
+          }
+        });
+    }
   };
 
   const getCompletedDaysCount = () => {
-    return Object.values(progress.daysProgress).filter(d => d.completed).length;
+    return Object.values(progress.daysProgress).filter((day) => day.completed).length;
   };
 
   const getProgressPercentage = () => {
@@ -122,8 +233,33 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const resetProgress = () => {
-    setProgress(defaultProgress);
-    localStorage.removeItem('fire-challenge-progress');
+    if (!user?.id) {
+      setProgress(defaultProgress);
+      return;
+    }
+
+    supabase
+      .from('day_progress')
+      .update({
+        completed: false,
+        completed_tasks: [],
+        mood: null,
+        diary_entry: null,
+        completed_at: null,
+        payload: {},
+      })
+      .eq('user_id', user.id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Erro ao resetar progresso:', error.message);
+          return;
+        }
+        setProgress((prev) => ({
+          ...defaultProgress,
+          userName: prev.userName,
+          startedAt: prev.startedAt,
+        }));
+      });
   };
 
   return (

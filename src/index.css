@@ -121,6 +121,18 @@
     pointer-events: none;
   }
 
+  .modal-overlay {
+    @apply fixed inset-0 z-40 bg-black/60 backdrop-blur-sm;
+  }
+
+  .modal-content {
+    @apply w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-border/60 bg-popover/95 shadow-2xl;
+  }
+
+  .modal-body {
+    @apply max-h-[65vh] overflow-y-auto p-4;
+  }
+
   /* Fire Button */
   .btn-fire {
     @apply relative overflow-hidden rounded-lg px-6 py-3 font-semibold text-white transition-all duration-300;

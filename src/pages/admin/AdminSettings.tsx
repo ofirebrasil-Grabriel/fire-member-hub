@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import type { Json } from '@/integrations/supabase/types';
 
 interface Setting {
   id: string;
   key: string;
-  value: any;
+  value: Json;
   description: string | null;
 }
 
@@ -68,7 +69,9 @@ export const AdminSettings = () => {
     let value = formData.value;
     try {
       value = JSON.parse(formData.value);
-    } catch {}
+    } catch {
+      // Mantem valor como string se nao for JSON valido
+    }
 
     if (editingSetting) {
       const { error } = await supabase
