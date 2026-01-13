@@ -7,16 +7,20 @@
 @layer base {
   :root {
     /* FIRE Challenge Design System - Dark Elegant Theme */
-    --background: 215 71% 8%;         /* #011627 - Deep navy */
-    --foreground: 240 19% 97%;        /* #F7F7FF - Almost white */
+    --background: 215 71% 8%;
+    /* #011627 - Deep navy */
+    --foreground: 240 19% 97%;
+    /* #F7F7FF - Almost white */
 
-    --card: 210 24% 20%;              /* #203342 - Surface blue */
+    --card: 210 24% 20%;
+    /* #203342 - Surface blue */
     --card-foreground: 240 19% 97%;
 
     --popover: 210 24% 15%;
     --popover-foreground: 240 19% 97%;
 
-    --primary: 24 100% 50%;           /* #FF6600 - Vibrant orange */
+    --primary: 24 100% 50%;
+    /* #FF6600 - Vibrant orange */
     --primary-foreground: 240 19% 97%;
 
     --secondary: 210 24% 25%;
@@ -104,6 +108,7 @@
 }
 
 @layer components {
+
   /* Glass Card */
   .glass-card {
     @apply relative overflow-hidden rounded-xl;
@@ -151,6 +156,23 @@
 
   .btn-fire:active {
     transform: translateY(0);
+  }
+
+  .btn-fire-3d {
+    @apply relative overflow-hidden rounded-xl px-6 py-3 font-bold text-white transition-all duration-150;
+    background: linear-gradient(135deg, hsl(24, 100%, 55%), hsl(24, 100%, 45%));
+    box-shadow: 0 4px 0 0 #b44600, 0 8px 16px hsla(24, 100%, 50%, 0.3);
+    border: none;
+  }
+
+  .btn-fire-3d:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 0 0 #b44600, 0 10px 20px hsla(24, 100%, 50%, 0.4);
+  }
+
+  .btn-fire-3d:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 0 #b44600, 0 2px 4px hsla(0, 0%, 0%, 0.2);
   }
 
   /* Text Gradient */
@@ -303,11 +325,25 @@
     animation: pulseGlow 2s ease-in-out infinite;
   }
 
-  .stagger-1 { animation-delay: 0.1s; }
-  .stagger-2 { animation-delay: 0.2s; }
-  .stagger-3 { animation-delay: 0.3s; }
-  .stagger-4 { animation-delay: 0.4s; }
-  .stagger-5 { animation-delay: 0.5s; }
+  .stagger-1 {
+    animation-delay: 0.1s;
+  }
+
+  .stagger-2 {
+    animation-delay: 0.2s;
+  }
+
+  .stagger-3 {
+    animation-delay: 0.3s;
+  }
+
+  .stagger-4 {
+    animation-delay: 0.4s;
+  }
+
+  .stagger-5 {
+    animation-delay: 0.5s;
+  }
 }
 
 @keyframes fadeUp {
@@ -315,6 +351,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -322,8 +359,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
@@ -331,6 +373,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -342,6 +385,7 @@
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -349,9 +393,12 @@
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 20px hsla(24, 100%, 50%, 0.3);
   }
+
   50% {
     box-shadow: 0 0 40px hsla(24, 100%, 50%, 0.5);
   }
