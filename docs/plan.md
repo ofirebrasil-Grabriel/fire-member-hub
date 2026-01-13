@@ -702,3 +702,10 @@ Arquivos:
 
 Arquivo:
 - `src/contexts/UserProgressContext.tsx`
+
+## Animacoes e UX
+- [x] Timeline nova com animacao de entrada (stagger) em `ChallengePath`.
+- [x] Modal de dia com animacao (framer-motion).
+
+Arquivo:
+- `src/pages/ChallengePath.tsx`

@@ -1,6 +1,15 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, Volume2, Play, Pause } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, Volume2, Play, Pause, Gauge } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface AudioExpandableCardProps {
   title: string;
@@ -23,29 +32,85 @@ export const AudioExpandableCard = ({
 }: AudioExpandableCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playbackOptions = [0.75, 1, 1.25, 1.5, 2];
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleLoaded = () => setDuration(audio.duration || 0);
+    const handleTime = () => {
+      if (!isSeeking) {
+        setCurrentTime(audio.currentTime || 0);
+      }
+    };
+    const handleEnded = () => setIsPlaying(false);
+    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => setIsPlaying(true);
+
+    audio.addEventListener('loadedmetadata', handleLoaded);
+    audio.addEventListener('timeupdate', handleTime);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('play', handlePlay);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoaded);
+      audio.removeEventListener('timeupdate', handleTime);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('play', handlePlay);
+    };
+  }, [audioUrl, isSeeking]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setCurrentTime(0);
+    setIsPlaying(false);
+  }, [audioUrl]);
 
   const handlePlayPause = () => {
     if (!audioUrl) return;
-
-    if (!audioElement) {
-      const audio = new Audio(audioUrl);
-      audio.addEventListener('ended', () => setIsPlaying(false));
-      audio.addEventListener('pause', () => setIsPlaying(false));
-      audio.addEventListener('play', () => setIsPlaying(true));
-      setAudioElement(audio);
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
       audio.play();
     } else {
-      if (isPlaying) {
-        audioElement.pause();
-      } else {
-        audioElement.play();
-      }
+      audio.pause();
     }
+  };
+
+  const handleSeek = (value: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = value;
+    setCurrentTime(value);
+  };
+
+  const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
     <div className="glass-card overflow-hidden">
+      {audioUrl && <audio ref={audioRef} src={audioUrl} preload="metadata" />}
       {/* Header with audio controls */}
       <div className="p-6">
         <div className="flex items-center justify-between gap-4">
@@ -62,25 +127,41 @@ export const AudioExpandableCard = ({
           {/* Audio player */}
           <div className="flex items-center gap-2">
             {audioUrl ? (
-              <button
-                onClick={handlePlayPause}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300',
-                  'bg-gradient-fire text-white hover:shadow-lg hover:shadow-primary/30'
-                )}
-              >
-                {isPlaying ? (
-                  <>
-                    <Pause className="w-4 h-4" />
-                    <span className="text-sm font-medium">Pausar</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4" />
-                    <span className="text-sm font-medium">Ouvir</span>
-                  </>
-                )}
-              </button>
+              <>
+                <Button onClick={handlePlayPause} className="btn-fire h-10 px-4">
+                  {isPlaying ? (
+                    <>
+                      <Pause className="w-4 h-4" />
+                      Pausar
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4" />
+                      Ouvir
+                    </>
+                  )}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="sm" className="h-10 px-3">
+                      <Gauge className="h-4 w-4" />
+                      {playbackRate}x
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[7rem]">
+                    <DropdownMenuRadioGroup
+                      value={String(playbackRate)}
+                      onValueChange={(value) => setPlaybackRate(Number(value))}
+                    >
+                      {playbackOptions.map((rate) => (
+                        <DropdownMenuRadioItem key={rate} value={String(rate)}>
+                          {rate}x
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface text-muted-foreground">
                 <Volume2 className="w-4 h-4" />
@@ -102,6 +183,24 @@ export const AudioExpandableCard = ({
             </button>
           </div>
         </div>
+
+        {audioUrl && (
+          <div className="mt-4 space-y-2">
+            <Slider
+              value={[currentTime]}
+              min={0}
+              max={duration || 0}
+              step={1}
+              onValueChange={(value) => handleSeek(value[0])}
+              onPointerDown={() => setIsSeeking(true)}
+              onPointerUp={() => setIsSeeking(false)}
+            />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Playing indicator */}
         {isPlaying && (

@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   BookOpen,
   ChevronRight,
-  Flame,
   Rocket,
   Shield,
   Sparkles,
@@ -69,6 +69,16 @@ const ChallengePath = () => {
     locked: 'bg-muted/50 text-muted-foreground',
   };
 
+  const timelineVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.06 } },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 14 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  };
+
   const handleSelectDay = (dayId: number) => {
     if (!canAccessDay(dayId)) return;
     setSelectedDay(dayId);
@@ -94,7 +104,7 @@ const ChallengePath = () => {
         <div className="glass-card rounded-2xl flex flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-fire shadow-fire">
-              <Flame className="h-6 w-6 text-white" />
+              <img src="/favicon-v2.svg" alt="FIRE" className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm font-semibold">FIRE 15D</p>
@@ -151,7 +161,13 @@ const ChallengePath = () => {
         </button>
 
         <div className="space-y-6">
-          <div className="relative w-full overflow-clip">
+          <motion.div
+            className="relative w-full overflow-clip"
+            variants={timelineVariants}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.2 }}
+          >
             <Timeline color="secondary" orientation="vertical" className="gap-5">
               {DAY_ENGINE.map((day, index) => {
                 const status = getStatus(day.id);
@@ -162,74 +178,76 @@ const ChallengePath = () => {
                 const isLast = index === DAY_ENGINE.length - 1;
 
                 return (
-                  <TimelineItem key={day.id}>
-                    <TimelineHeader>
-                      {!isLast && <TimelineSeparator className="bg-primary/30" />}
-                      <TimelineIcon
-                        className={cn(
-                          'text-[11px] font-semibold',
-                          isCurrent && 'border-transparent bg-gradient-fire text-white shadow-fire',
-                          isCompleted && 'border-success/50 bg-success/20 text-success',
-                          isLocked && 'border-border/70 bg-surface/60 text-muted-foreground',
-                          !isCurrent && !isCompleted && !isLocked && 'border-border/70 bg-surface/80 text-foreground'
-                        )}
-                      >
-                        {day.id}
-                      </TimelineIcon>
-                    </TimelineHeader>
-                    <TimelineBody className="-translate-y-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSelectDay(day.id)}
-                        disabled={isLocked}
-                        className={cn(
-                          'flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left transition-colors',
-                          !isLocked && 'hover:bg-surface/40',
-                          isLocked && 'cursor-not-allowed opacity-60',
-                          isCurrent && 'bg-primary/10',
-                          isCompleted && 'bg-success/5'
-                        )}
-                      >
-                        <div
+                  <motion.div key={day.id} variants={itemVariants}>
+                    <TimelineItem>
+                      <TimelineHeader>
+                        {!isLast && <TimelineSeparator className="bg-primary/30" />}
+                        <TimelineIcon
                           className={cn(
-                            'text-base font-semibold',
-                            isLocked && 'text-muted-foreground/80'
+                            'text-[11px] font-semibold',
+                            isCurrent && 'border-transparent bg-gradient-fire text-white shadow-fire',
+                            isCompleted && 'border-success/50 bg-success/20 text-success',
+                            isLocked && 'border-border/70 bg-surface/60 text-muted-foreground',
+                            !isCurrent && !isCompleted && !isLocked && 'border-border/70 bg-surface/80 text-foreground'
                           )}
                         >
-                          {day.title}
-                        </div>
-                        <div
+                          {day.id}
+                        </TimelineIcon>
+                      </TimelineHeader>
+                      <TimelineBody className="-translate-y-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectDay(day.id)}
+                          disabled={isLocked}
                           className={cn(
-                            'text-sm text-muted-foreground',
-                            isLocked && 'text-muted-foreground/60'
+                            'flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left transition-colors',
+                            !isLocked && 'hover:bg-surface/40',
+                            isLocked && 'cursor-not-allowed opacity-60',
+                            isCurrent && 'bg-primary/10',
+                            isCompleted && 'bg-success/5'
                           )}
                         >
-                          {day.objective}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                          <span>DIA {day.id}</span>
-                          <span>·</span>
-                          <span>{day.badge}</span>
-                          <span className="inline-flex items-center gap-1">
-                            <phase.icon className="h-3 w-3" />
-                            {phase.label}
-                          </span>
-                          <span
+                          <div
                             className={cn(
-                              'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                              statusBadgeClasses[status]
+                              'text-base font-semibold',
+                              isLocked && 'text-muted-foreground/80'
                             )}
                           >
-                            {statusLabels[status]}
-                          </span>
-                        </div>
-                      </button>
-                    </TimelineBody>
-                  </TimelineItem>
+                            {day.title}
+                          </div>
+                          <div
+                            className={cn(
+                              'text-sm text-muted-foreground',
+                              isLocked && 'text-muted-foreground/60'
+                            )}
+                          >
+                            {day.objective}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                            <span>DIA {day.id}</span>
+                            <span>·</span>
+                            <span>{day.badge}</span>
+                            <span className="inline-flex items-center gap-1">
+                              <phase.icon className="h-3 w-3" />
+                              {phase.label}
+                            </span>
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                                statusBadgeClasses[status]
+                              )}
+                            >
+                              {statusLabels[status]}
+                            </span>
+                          </div>
+                        </button>
+                      </TimelineBody>
+                    </TimelineItem>
+                  </motion.div>
                 );
               })}
             </Timeline>
-          </div>
+          </motion.div>
         </div>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">

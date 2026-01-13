@@ -71,7 +71,7 @@ const Timeline = ({
   );
 };
 
-interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {}
+type TimelineItemProps = React.HTMLAttributes<HTMLDivElement>;
 
 const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(
   ({ className, ...props }, ref) => {
@@ -92,7 +92,7 @@ const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(
 );
 TimelineItem.displayName = 'TimelineItem';
 
-interface TimelineHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
+type TimelineHeaderProps = React.HTMLAttributes<HTMLDivElement>;
 
 const TimelineHeader = React.forwardRef<HTMLDivElement, TimelineHeaderProps>(
   ({ className, ...props }, ref) => {
@@ -113,7 +113,7 @@ const TimelineHeader = React.forwardRef<HTMLDivElement, TimelineHeaderProps>(
 );
 TimelineHeader.displayName = 'TimelineHeader';
 
-interface TimelineSeparatorProps extends React.HTMLAttributes<HTMLSpanElement> {}
+type TimelineSeparatorProps = React.HTMLAttributes<HTMLSpanElement>;
 
 const TimelineSeparator = React.forwardRef<HTMLSpanElement, TimelineSeparatorProps>(
   ({ className, ...props }, ref) => {
@@ -135,7 +135,7 @@ const TimelineSeparator = React.forwardRef<HTMLSpanElement, TimelineSeparatorPro
 );
 TimelineSeparator.displayName = 'TimelineSeparator';
 
-interface TimelineIconProps extends React.HTMLAttributes<HTMLDivElement> {}
+type TimelineIconProps = React.HTMLAttributes<HTMLDivElement>;
 
 const TimelineIcon = React.forwardRef<HTMLDivElement, TimelineIconProps>(
   ({ className, ...props }, ref) => {
@@ -155,7 +155,7 @@ const TimelineIcon = React.forwardRef<HTMLDivElement, TimelineIconProps>(
 );
 TimelineIcon.displayName = 'TimelineIcon';
 
-interface TimelineBodyProps extends React.HTMLAttributes<HTMLDivElement> {}
+type TimelineBodyProps = React.HTMLAttributes<HTMLDivElement>;
 
 const TimelineBody = React.forwardRef<HTMLDivElement, TimelineBodyProps>(
   ({ className, ...props }, ref) => {
