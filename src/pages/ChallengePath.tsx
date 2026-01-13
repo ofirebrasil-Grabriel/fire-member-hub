@@ -98,8 +98,8 @@ const ChallengePath = () => {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-surface/60 px-6 py-7 md:px-8">
+      <div className="mx-auto max-w-7xl px-0 md:px-6 space-y-8">
+        <div className="relative w-full overflow-hidden rounded-3xl border border-border/60 bg-surface/60 px-6 py-7 md:px-8">
           <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gradient-glass opacity-30 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-10 h-72 w-72 rounded-full bg-surface/70 blur-3xl" />
 
@@ -138,11 +138,11 @@ const ChallengePath = () => {
                 </p>
               </div>
 
-              <div className="glass-card space-y-3 p-4 md:p-5">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 bg-surface/70 text-foreground">
+              <div className="glass-card flex h-auto flex-col gap-4 p-4 md:p-7">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-border/60 bg-surface/70 text-foreground">
                     {CurrentDayIcon ? (
-                      <CurrentDayIcon className="h-6 w-6 text-primary" />
+                      <CurrentDayIcon className="h-12 w-12 text-primary" />
                     ) : (
                       <span className="text-2xl">{currentDayEmoji}</span>
                     )}
@@ -162,13 +162,13 @@ const ChallengePath = () => {
               </div>
             </div>
 
-            <div className="glass-card flex h-full flex-col gap-6 p-5 md:p-7">
+            <div className="glass-card flex h-full flex-col gap-6 p-4 md:p-7">
               <div className="text-center">
                 <p className="text-[22px] font-bold tracking-tight">Seu progresso</p>
                 <p className="text-[14px] text-muted-foreground  tracking-wider font-medium">Acompanhe a evolução</p>
               </div>
 
-              <div className="flex items-center justify-center gap-6 relative px-2">
+              <div className="flex items-center justify-center gap-4 relative px-2">
                 {/* Lado Esquerdo: Gráfico Circular (Atrás) */}
                 <div className="shrink-0 relative z-0">
                   <div
