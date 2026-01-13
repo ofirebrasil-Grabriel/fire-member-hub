@@ -61,11 +61,13 @@ const TrackPathCard = ({
   item,
   onSelect,
   iconSide = 'right',
+  iconPosition = 'side',
   className,
 }: {
   item: TrackItem;
   onSelect: (dayId: number) => void;
   iconSide?: 'left' | 'right';
+  iconPosition?: 'side' | 'top';
   className?: string;
 }) => {
   const isLocked = item.status === 'locked';
@@ -87,7 +89,8 @@ const TrackPathCard = ({
       onClick={() => !isLocked && onSelect(item.id)}
       disabled={isLocked}
       className={cn(
-        'group relative rounded-[30px] border border-border/60 bg-gradient-glass px-10 py-6 text-left shadow-glass transition-all duration-300',
+        'group relative rounded-[30px] border border-border/60 bg-gradient-glass px-6 py-6 text-left shadow-glass transition-all duration-300 lg:px-10',
+        iconPosition === 'top' && 'pt-14',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         !isLocked && 'hover:-translate-y-0.5 hover:border-primary/30',
         isLocked && 'cursor-not-allowed opacity-60',
@@ -95,34 +98,54 @@ const TrackPathCard = ({
       )}
     >
       <span className="pointer-events-none absolute inset-0 rounded-[26px] bg-gradient-to-br from-highlight/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-      <div
-        className={cn(
-          'absolute top-1/2 flex h-[72px] w-[72px] -translate-y-1/2 items-center justify-center rounded-[22px] border border-border/70 bg-surface/80 shadow-glass',
-          iconSide === 'left' ? 'left-0 -translate-x-1/2' : 'right-0 translate-x-1/2'
-        )}
-      >
-        <Icon
+
+      {/* Ícone no topo - versão mobile */}
+      {iconPosition === 'top' && (
+        <div className="absolute left-1/2 top-0 flex h-[56px] w-[56px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[18px] border border-border/70 bg-surface/80 shadow-glass">
+          <Icon
+            className={cn(
+              'h-6 w-6',
+              item.status === 'completed' && 'text-success',
+              item.status === 'current' && 'text-primary',
+              item.status === 'available' && 'text-muted-foreground',
+              item.status === 'locked' && 'text-primary'
+            )}
+          />
+        </div>
+      )}
+
+      {/* Ícone lateral - versão desktop */}
+      {iconPosition === 'side' && (
+        <div
           className={cn(
-            'h-8 w-8',
-            item.status === 'completed' && 'text-success',
-            item.status === 'current' && 'text-primary',
-            item.status === 'available' && 'text-muted-foreground',
-            item.status === 'locked' && 'text-primary'
+            'absolute top-1/2 flex h-[72px] w-[72px] -translate-y-1/2 items-center justify-center rounded-[22px] border border-border/70 bg-surface/80 shadow-glass',
+            iconSide === 'left' ? 'left-0 -translate-x-1/2' : 'right-0 translate-x-1/2'
           )}
-        />
-      </div>
+        >
+          <Icon
+            className={cn(
+              'h-8 w-8',
+              item.status === 'completed' && 'text-success',
+              item.status === 'current' && 'text-primary',
+              item.status === 'available' && 'text-muted-foreground',
+              item.status === 'locked' && 'text-primary'
+            )}
+          />
+        </div>
+      )}
+
       <div className="relative space-y-4 text-center">
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-3">
           <span
             className={cn(
-              'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-wider',
+              'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[9px] font-medium uppercase tracking-wider lg:px-3 lg:text-[10px]',
               item.phase.tone
             )}
           >
             <item.phase.icon className="h-3 w-3" />
             {item.phase.label}
           </span>
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground lg:text-[11px]">
             Dia {item.id} | {item.badge}
           </span>
         </div>
@@ -130,7 +153,7 @@ const TrackPathCard = ({
         <div className="space-y-2">
           <h3
             className={cn(
-              'text-2xl font-semibold leading-tight',
+              'text-xl font-semibold leading-tight lg:text-2xl',
               isLocked && 'text-muted-foreground/80'
             )}
           >
@@ -138,7 +161,7 @@ const TrackPathCard = ({
           </h3>
           <p
             className={cn(
-              'mx-auto max-w-[420px] text-base leading-relaxed text-muted-foreground',
+              'mx-auto max-w-[420px] text-sm leading-relaxed text-muted-foreground lg:text-base',
               isLocked && 'text-muted-foreground/60'
             )}
           >
@@ -148,13 +171,13 @@ const TrackPathCard = ({
 
         <div className="h-px w-full bg-border/60" />
 
-        <div className="grid grid-cols-3 items-center text-[11px] uppercase tracking-wider text-muted-foreground">
-          <span className="inline-flex items-center gap-2 justify-self-start">
+        <div className="grid grid-cols-3 items-center text-[10px] uppercase tracking-wider text-muted-foreground lg:text-[11px]">
+          <span className="inline-flex items-center gap-1.5 justify-self-start lg:gap-2">
             <StatusIcon className="h-3 w-3" />
             {actionLabel}
           </span>
           <ChevronRight className="h-4 w-4 rotate-90 justify-self-center text-muted-foreground/70" />
-          <span className={cn(statusBadgeClasses[item.status], 'justify-self-end')}>
+          <span className={cn(statusBadgeClasses[item.status], 'justify-self-end text-[9px] lg:text-[11px]')}>
             {statusLabels[item.status]}
           </span>
         </div>
@@ -174,14 +197,14 @@ export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
 
   return (
     <>
-      <div className="space-y-6 lg:hidden">
+      <div className="space-y-8 lg:hidden">
         {items.map((item) => (
           <TrackPathCard
             key={item.id}
             item={item}
             onSelect={onSelect}
-            iconSide="left"
-            className="w-full max-w-[640px]"
+            iconPosition="top"
+            className="mx-auto w-full max-w-[400px]"
           />
         ))}
       </div>
