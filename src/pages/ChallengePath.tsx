@@ -138,7 +138,7 @@ const ChallengePath = () => {
                 </p>
               </div>
 
-              <div className="glass-card flex h-auto flex-col gap-4 p-4 md:p-7">
+              <div className="glass-card flex items-center justify-center h-auto flex-col gap-6 p-4 md:p-7  ">
                 <div className="flex items-center justify-center gap-2">
                   <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-border/60 bg-surface/70 text-foreground">
                     {CurrentDayIcon ? (
@@ -154,7 +154,7 @@ const ChallengePath = () => {
                   </div>
                 </div>
                 <Button
-                  className="btn-fire inline-flex items-center gap-2"
+                  className="btn-fire w-8/12 inline-flex items-center justify-center gap-2 "
                   onClick={() => handleSelectDay(currentDayConfig?.id ?? progress.currentDay)}
                 >
                   Continuar dia <ChevronRight className="h-4 w-4" />
