@@ -1,6 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-type SupabaseClient = ReturnType<typeof createClient>;
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +26,19 @@ interface HotmartPayload {
       subscriber_code: string;
     };
   };
+}
+
+async function updateWebhookLog(
+  supabase: SupabaseClient,
+  logId: string | undefined,
+  statusCode: number,
+  response: Record<string, unknown>
+) {
+  if (!logId) return;
+  await supabase
+    .from('webhook_logs')
+    .update({ status_code: statusCode, response })
+    .eq('id', logId);
 }
 
 Deno.serve(async (req) => {
@@ -80,7 +91,7 @@ Deno.serve(async (req) => {
     // Map Hotmart events to subscription status
     let subscriptionStatus: 'active' | 'canceled' | 'overdue' | 'refunded' = 'active';
     let shouldCreateUser = false;
-    let shouldBlockAccess = false;
+    const shouldBlockAccess = false;
     
     switch (payload.event) {
       case 'PURCHASE_APPROVED':
@@ -92,12 +103,10 @@ Deno.serve(async (req) => {
       case 'PURCHASE_CANCELED':
       case 'SUBSCRIPTION_CANCELLATION':
         subscriptionStatus = 'canceled';
-        shouldBlockAccess = true;
         break;
       case 'PURCHASE_REFUNDED':
       case 'PURCHASE_CHARGEBACK':
         subscriptionStatus = 'refunded';
-        shouldBlockAccess = true;
         break;
       case 'PURCHASE_DELAYED':
       case 'PURCHASE_PROTEST':
@@ -237,16 +246,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-async function updateWebhookLog(
-  supabase: SupabaseClient,
-  logId: string | undefined,
-  statusCode: number,
-  response: Record<string, unknown>
-) {
-  if (!logId) return;
-  await supabase
-    .from('webhook_logs')
-    .update({ status_code: statusCode, response })
-    .eq('id', logId);
-}

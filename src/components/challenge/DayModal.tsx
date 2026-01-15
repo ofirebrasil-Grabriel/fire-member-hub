@@ -60,7 +60,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
   if (!config) return null;
   const displayTitle = day?.title ?? config.title;
   const displaySubtitle = day?.subtitle ?? config.objective;
-  const defaultValues = progress.daysProgress[dayId]?.payload;
+  const defaultValues = progress.daysProgress[dayId]?.form_data;
   const isCompleted = Boolean(progress.daysProgress[dayId]?.completed);
 
   const handleCompleteDay = async (values: Record<string, unknown>) => {

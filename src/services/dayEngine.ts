@@ -58,21 +58,33 @@ const extractEssentials = (payload: Record<string, unknown>) => {
 const sumValues = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
 const saveUserProfile = async (userId: string, payload: Record<string, unknown>) => {
-  const { error } = await supabase
+  // Check if profile exists
+  const { data: existing } = await supabase
     .from('user_profile')
-    .upsert(
-      {
-        user_id: userId,
-        fixed_time: payload.fixed_time || null,
-        sources: (payload.sources as string[]) || [],
-        anxiety_score: payload.anxiety_score === undefined ? null : toNumber(payload.anxiety_score),
-        clarity_score: payload.clarity_score === undefined ? null : toNumber(payload.clarity_score),
-        no_new_debt_commitment: toBoolean(payload.no_new_debt_commitment),
-      },
-      { onConflict: 'user_id' }
-    );
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-  if (error) throw error;
+  const profileData = {
+    fixed_time: (payload.fixed_time as string) || null,
+    sources: (payload.sources as string[]) || [],
+    anxiety_score: payload.anxiety_score === undefined ? null : toNumber(payload.anxiety_score),
+    clarity_score: payload.clarity_score === undefined ? null : toNumber(payload.clarity_score),
+    no_new_debt_commitment: toBoolean(payload.no_new_debt_commitment),
+  };
+
+  if (existing) {
+    const { error } = await supabase
+      .from('user_profile')
+      .update(profileData)
+      .eq('user_id', userId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('user_profile')
+      .insert({ user_id: userId, ...profileData });
+    if (error) throw error;
+  }
 };
 
 const saveMonthlyBudget = async (userId: string, payload: Record<string, unknown>) => {

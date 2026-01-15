@@ -318,7 +318,7 @@ const Day1Form: React.FC<Day1FormProps> = ({ onComplete, defaultValues = {} }) =
                         />
                         <div className="flex justify-between text-xs text-muted-foreground mt-2">
                             <span>0 - Sufocado</span>
-                            <span className="text-2xl font-bold text-primary">{formData.breath_score}</span>
+                            <span className="text-2xl font-bold text-primary">{String(formData.breath_score)}</span>
                             <span>10 - Tranquilo</span>
                         </div>
                     </div>
