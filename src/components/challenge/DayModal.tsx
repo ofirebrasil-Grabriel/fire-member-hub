@@ -12,6 +12,9 @@ import { useUserProgress } from '@/contexts/UserProgressContext';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useDay } from '@/hooks/useDays';
+import Day1Form from '@/components/day/Day1Form';
+import Day2Stepper from '@/components/day/Day2Stepper';
+import DayCelebrationModal from '@/components/day/DayCelebrationModal';
 
 interface DayModalProps {
   dayId: number;
@@ -32,6 +35,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
   const [payload, setPayload] = useState<Record<string, unknown>>({});
   const [metrics, setMetrics] = useState<OutputMetricValue[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     if (!config) return;
@@ -71,6 +75,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
       setMetrics(result);
       setPhase('output');
       setPanel('execucao');
+      setShowCelebration(true);
       onCompleted?.(dayId, values);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro inesperado';
@@ -180,34 +185,62 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
 
                 {panel === 'execucao' && (
                   <>
-                    {day?.commitment && (
-                      <div className="glass-card p-4">
-                        <h4 className="text-sm font-semibold">Seu compromisso</h4>
-                        <p className="mt-2 text-sm text-muted-foreground">{day.commitment}</p>
-                      </div>
-                    )}
-                    {phase === 'input' && (
-                      <DayInputForm
-                        inputs={config.inputs}
-                        onSubmit={handleInputSubmit}
-                        defaultValues={defaultValues}
-                        submitLabel={config.crudType ? 'Continuar' : 'Concluir dia'}
-                        isSubmitting={saving}
+                    {dayId === 1 && !isCompleted && phase !== 'output' && (
+                      <Day1Form
+                        onComplete={handleCompleteDay}
+                        defaultValues={defaultValues as Record<string, unknown>}
                       />
                     )}
 
-                    {phase === 'crud' && (
-                      <div className="space-y-6">
-                        <CrudSection type={config.crudType as CrudType} />
-                      </div>
+                    {dayId === 2 && !isCompleted && phase !== 'output' && (
+                      <Day2Stepper
+                        onComplete={handleCompleteDay}
+                        defaultValues={defaultValues as Record<string, unknown>}
+                      />
                     )}
 
-                    {phase === 'output' && (
-                      <OutputPanel metrics={metrics} nextDay={dayId < 15 ? dayId + 1 : null} />
+                    {((dayId !== 1 && dayId !== 2) || isCompleted || phase === 'output') && (
+                      <>
+                        {day?.commitment && (
+                          <div className="glass-card p-4">
+                            <h4 className="text-sm font-semibold">Seu compromisso</h4>
+                            <p className="mt-2 text-sm text-muted-foreground">{day.commitment}</p>
+                          </div>
+                        )}
+                        {phase === 'input' && (
+                          <DayInputForm
+                            inputs={config.inputs}
+                            onSubmit={handleInputSubmit}
+                            defaultValues={defaultValues}
+                            submitLabel={config.crudType ? 'Continuar' : 'Concluir dia'}
+                            isSubmitting={saving}
+                          />
+                        )}
+
+                        {phase === 'crud' && (
+                          <div className="space-y-6">
+                            <CrudSection type={config.crudType as CrudType} />
+                          </div>
+                        )}
+
+                        {phase === 'output' && (
+                          <OutputPanel metrics={metrics} nextDay={dayId < 15 ? dayId + 1 : null} />
+                        )}
+                      </>
                     )}
                   </>
                 )}
               </div>
+
+              <DayCelebrationModal
+                isOpen={showCelebration}
+                onClose={() => setShowCelebration(false)}
+                dayId={dayId}
+                dayTitle={day?.title || config.title}
+                motivationPhrase={day?.motivationPhrase || ''}
+                rewardLabel={day?.rewardLabel || 'Conquista desbloqueada'}
+                rewardIcon={day?.rewardIcon || 'award'}
+              />
 
               {/* Footer fixo para o botão no mobile */}
               {panel === 'execucao' && phase === 'crud' && (

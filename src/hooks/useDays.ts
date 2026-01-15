@@ -31,6 +31,9 @@ export interface DayContent {
   commitment: string | null;
   nextDayPreview: string | null;
   description: string | null;
+  motivationPhrase: string | null;
+  rewardLabel: string | null;
+  rewardIcon: string | null;
 }
 
 interface DatabaseDay {
@@ -51,6 +54,9 @@ interface DatabaseDay {
   commitment: string | null;
   next_day_preview: string | null;
   description: string | null;
+  motivation_phrase: string | null;
+  reward_label: string | null;
+  reward_icon: string | null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -195,6 +201,9 @@ const mapDatabaseToContent = (dbDay: DatabaseDay): DayContent => {
     commitment: dbDay.commitment,
     nextDayPreview: dbDay.next_day_preview,
     description: dbDay.description,
+    motivationPhrase: dbDay.motivation_phrase,
+    rewardLabel: dbDay.reward_label,
+    rewardIcon: dbDay.reward_icon,
   };
 };
 

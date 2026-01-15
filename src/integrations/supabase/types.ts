@@ -14,163 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
-      day_progress: {
+      agreements: {
         Row: {
-          completed: boolean | null
-          completed_at: string | null
-          completed_tasks: string[] | null
+          boleto_path: string | null
+          contract_path: string | null
           created_at: string | null
-          day_id: number
-          diary_entry: string | null
+          creditor_name: string
+          debt_id: string | null
+          end_date: string | null
+          entry_amount: number | null
           id: string
-          mood: string | null
-          payload: Json | null
+          installments: number
+          interest_rate: number | null
+          monthly_payment: number
+          negotiation_plan_id: string | null
+          next_payment_date: string | null
+          original_value: number | null
+          paid_installments: number | null
+          savings: number | null
+          start_date: string
+          status: string | null
+          total_amount: number
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
-          completed?: boolean | null
-          completed_at?: string | null
-          completed_tasks?: string[] | null
+          boleto_path?: string | null
+          contract_path?: string | null
           created_at?: string | null
-          day_id: number
-          diary_entry?: string | null
+          creditor_name: string
+          debt_id?: string | null
+          end_date?: string | null
+          entry_amount?: number | null
           id?: string
-          mood?: string | null
-          payload?: Json | null
+          installments: number
+          interest_rate?: number | null
+          monthly_payment: number
+          negotiation_plan_id?: string | null
+          next_payment_date?: string | null
+          original_value?: number | null
+          paid_installments?: number | null
+          savings?: number | null
+          start_date: string
+          status?: string | null
+          total_amount: number
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
-          completed?: boolean | null
-          completed_at?: string | null
-          completed_tasks?: string[] | null
+          boleto_path?: string | null
+          contract_path?: string | null
           created_at?: string | null
-          day_id?: number
-          diary_entry?: string | null
+          creditor_name?: string
+          debt_id?: string | null
+          end_date?: string | null
+          entry_amount?: number | null
           id?: string
-          mood?: string | null
-          payload?: Json | null
+          installments?: number
+          interest_rate?: number | null
+          monthly_payment?: number
+          negotiation_plan_id?: string | null
+          next_payment_date?: string | null
+          original_value?: number | null
+          paid_installments?: number | null
+          savings?: number | null
+          start_date?: string
+          status?: string | null
+          total_amount?: number
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "day_progress_user_id_fkey"
+            foreignKeyName: "agreements_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_negotiation_plan_id_fkey"
+            columns: ["negotiation_plan_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
-      }
-      days: {
-        Row: {
-          challenge_details: string | null
-          commitment: string | null
-          concept: string | null
-          concept_audio_url: string | null
-          concept_title: string | null
-          created_at: string | null
-          description: string | null
-          emoji: string | null
-          expected_result: string | null
-          icon_name: string | null
-          id: number
-          morning_audio_url: string | null
-          morning_message: string | null
-          next_day_preview: string | null
-          reflection_prompt: string | null
-          reflection_questions: string[] | null
-          subtitle: string
-          task_steps: Json | null
-          task_title: string | null
-          title: string
-          tools: string[] | null
-          updated_at: string | null
-        }
-        Insert: {
-          challenge_details?: string | null
-          commitment?: string | null
-          concept?: string | null
-          concept_audio_url?: string | null
-          concept_title?: string | null
-          created_at?: string | null
-          description?: string | null
-          emoji?: string | null
-          expected_result?: string | null
-          icon_name?: string | null
-          id?: number
-          morning_audio_url?: string | null
-          morning_message?: string | null
-          next_day_preview?: string | null
-          reflection_prompt?: string | null
-          reflection_questions?: string[] | null
-          subtitle: string
-          task_steps?: Json | null
-          task_title?: string | null
-          title: string
-          tools?: string[] | null
-          updated_at?: string | null
-        }
-        Update: {
-          challenge_details?: string | null
-          commitment?: string | null
-          concept?: string | null
-          concept_audio_url?: string | null
-          concept_title?: string | null
-          created_at?: string | null
-          description?: string | null
-          emoji?: string | null
-          expected_result?: string | null
-          icon_name?: string | null
-          id?: number
-          morning_audio_url?: string | null
-          morning_message?: string | null
-          next_day_preview?: string | null
-          reflection_prompt?: string | null
-          reflection_questions?: string[] | null
-          subtitle?: string
-          task_steps?: Json | null
-          task_title?: string | null
-          title?: string
-          tools?: string[] | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      library_items: {
-        Row: {
-          category: string
-          created_at: string | null
-          description: string | null
-          group_label: string | null
-          id: string
-          label: string
-          sort_order: number
-          updated_at: string | null
-        }
-        Insert: {
-          category: string
-          created_at?: string | null
-          description?: string | null
-          group_label?: string | null
-          id?: string
-          label: string
-          sort_order?: number
-          updated_at?: string | null
-        }
-        Update: {
-          category?: string
-          created_at?: string | null
-          description?: string | null
-          group_label?: string | null
-          id?: string
-          label?: string
-          sort_order?: number
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       calendar_items: {
         Row: {
@@ -179,9 +115,9 @@ export type Database = {
           id: string
           is_critical: boolean | null
           is_fixed: boolean | null
+          paid: boolean | null
           source_debt_id: string | null
           title: string
-          updated_at: string | null
           user_id: string
           value: number | null
         }
@@ -191,9 +127,9 @@ export type Database = {
           id?: string
           is_critical?: boolean | null
           is_fixed?: boolean | null
+          paid?: boolean | null
           source_debt_id?: string | null
           title: string
-          updated_at?: string | null
           user_id: string
           value?: number | null
         }
@@ -203,9 +139,9 @@ export type Database = {
           id?: string
           is_critical?: boolean | null
           is_fixed?: boolean | null
+          paid?: boolean | null
           source_debt_id?: string | null
           title?: string
-          updated_at?: string | null
           user_id?: string
           value?: number | null
         }
@@ -215,13 +151,6 @@ export type Database = {
             columns: ["source_debt_id"]
             isOneToOne: false
             referencedRelation: "debts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "calendar_items_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -305,6 +234,146 @@ export type Database = {
           },
         ]
       }
+      day_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          completed_tasks: string[] | null
+          created_at: string | null
+          day_id: number
+          diary_entry: string | null
+          form_data: Json | null
+          id: string
+          mood: string | null
+          reward_claimed: boolean | null
+          reward_timestamp: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          completed_tasks?: string[] | null
+          created_at?: string | null
+          day_id: number
+          diary_entry?: string | null
+          form_data?: Json | null
+          id?: string
+          mood?: string | null
+          reward_claimed?: boolean | null
+          reward_timestamp?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          completed_tasks?: string[] | null
+          created_at?: string | null
+          day_id?: number
+          diary_entry?: string | null
+          form_data?: Json | null
+          id?: string
+          mood?: string | null
+          reward_claimed?: boolean | null
+          reward_timestamp?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "day_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      days: {
+        Row: {
+          challenge_details: string | null
+          commitment: string | null
+          concept: string | null
+          concept_audio_url: string | null
+          concept_title: string | null
+          created_at: string | null
+          description: string | null
+          emoji: string | null
+          expected_result: string | null
+          icon_name: string | null
+          id: number
+          morning_audio_url: string | null
+          morning_message: string | null
+          motivation_phrase: string | null
+          next_day_preview: string | null
+          reflection_prompt: string | null
+          reflection_questions: string[] | null
+          reward_icon: string | null
+          reward_label: string | null
+          subtitle: string
+          task_steps: Json | null
+          task_title: string | null
+          title: string
+          tools: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          challenge_details?: string | null
+          commitment?: string | null
+          concept?: string | null
+          concept_audio_url?: string | null
+          concept_title?: string | null
+          created_at?: string | null
+          description?: string | null
+          emoji?: string | null
+          expected_result?: string | null
+          icon_name?: string | null
+          id?: number
+          morning_audio_url?: string | null
+          morning_message?: string | null
+          motivation_phrase?: string | null
+          next_day_preview?: string | null
+          reflection_prompt?: string | null
+          reflection_questions?: string[] | null
+          reward_icon?: string | null
+          reward_label?: string | null
+          subtitle: string
+          task_steps?: Json | null
+          task_title?: string | null
+          title: string
+          tools?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          challenge_details?: string | null
+          commitment?: string | null
+          concept?: string | null
+          concept_audio_url?: string | null
+          concept_title?: string | null
+          created_at?: string | null
+          description?: string | null
+          emoji?: string | null
+          expected_result?: string | null
+          icon_name?: string | null
+          id?: number
+          morning_audio_url?: string | null
+          morning_message?: string | null
+          motivation_phrase?: string | null
+          next_day_preview?: string | null
+          reflection_prompt?: string | null
+          reflection_questions?: string[] | null
+          reward_icon?: string | null
+          reward_label?: string | null
+          subtitle?: string
+          task_steps?: Json | null
+          task_title?: string | null
+          title?: string
+          tools?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       debts: {
         Row: {
           created_at: string | null
@@ -355,6 +424,233 @@ export type Database = {
           },
         ]
       }
+      decision_rules: {
+        Row: {
+          created_at: string | null
+          default_action: string | null
+          id: string
+          level_1: Json | null
+          level_2: Json | null
+          level_3: Json | null
+          primary_trigger: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_action?: string | null
+          id?: string
+          level_1?: Json | null
+          level_2?: Json | null
+          level_3?: Json | null
+          primary_trigger?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_action?: string | null
+          id?: string
+          level_1?: Json | null
+          level_2?: Json | null
+          level_3?: Json | null
+          primary_trigger?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_rules_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emergency_fund: {
+        Row: {
+          account_info: string | null
+          account_type: string | null
+          auto_transfer: boolean | null
+          created_at: string | null
+          current_balance: number | null
+          goal_amount: number | null
+          id: string
+          monthly_contribution: number | null
+          target_date: string | null
+          transfer_day: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_info?: string | null
+          account_type?: string | null
+          auto_transfer?: boolean | null
+          created_at?: string | null
+          current_balance?: number | null
+          goal_amount?: number | null
+          id?: string
+          monthly_contribution?: number | null
+          target_date?: string | null
+          transfer_day?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_info?: string | null
+          account_type?: string | null
+          auto_transfer?: boolean | null
+          created_at?: string | null
+          current_balance?: number | null
+          goal_amount?: number | null
+          id?: string
+          monthly_contribution?: number | null
+          target_date?: string | null
+          transfer_day?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_fund_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fixed_expenses: {
+        Row: {
+          auto_debit: boolean | null
+          category: string | null
+          created_at: string | null
+          due_date: number | null
+          id: string
+          name: string
+          notes: string | null
+          payment_method: string | null
+          priority: string | null
+          updated_at: string | null
+          user_id: string
+          amount: number
+        }
+        Insert: {
+          auto_debit?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          due_date?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          payment_method?: string | null
+          priority?: string | null
+          updated_at?: string | null
+          user_id: string
+          amount: number
+        }
+        Update: {
+          auto_debit?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          due_date?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          payment_method?: string | null
+          priority?: string | null
+          updated_at?: string | null
+          user_id?: string
+          amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_expenses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      income_items: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          received_on: number | null
+          recurrence: string | null
+          source: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          received_on?: number | null
+          recurrence?: string | null
+          source: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          received_on?: number | null
+          recurrence?: string | null
+          source?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          group_label: string | null
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          group_label?: string | null
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          group_label?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       monthly_budget: {
         Row: {
           created_at: string | null
@@ -392,6 +688,147 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "monthly_budget_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiation_plans: {
+        Row: {
+          contact_email: string | null
+          contact_hours: string | null
+          contact_phone: string | null
+          created_at: string | null
+          creditor_name: string | null
+          debt_id: string | null
+          documents_needed: string | null
+          id: string
+          ideal_monthly_payment: number | null
+          key_arguments: string | null
+          max_entry: number | null
+          max_installment: number | null
+          max_monthly_payment: number | null
+          notes: string | null
+          objective: string | null
+          priority: string | null
+          priority_level: string | null
+          scheduled_at: string | null
+          scripts: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_hours?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          creditor_name?: string | null
+          debt_id?: string | null
+          documents_needed?: string | null
+          id?: string
+          ideal_monthly_payment?: number | null
+          key_arguments?: string | null
+          max_entry?: number | null
+          max_installment?: number | null
+          max_monthly_payment?: number | null
+          notes?: string | null
+          objective?: string | null
+          priority?: string | null
+          priority_level?: string | null
+          scheduled_at?: string | null
+          scripts?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_hours?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          creditor_name?: string | null
+          debt_id?: string | null
+          documents_needed?: string | null
+          id?: string
+          ideal_monthly_payment?: number | null
+          key_arguments?: string | null
+          max_entry?: number | null
+          max_installment?: number | null
+          max_monthly_payment?: number | null
+          notes?: string | null
+          objective?: string | null
+          priority?: string | null
+          priority_level?: string | null
+          scheduled_at?: string | null
+          scripts?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_plans_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiation_sessions: {
+        Row: {
+          channel: string | null
+          created_at: string | null
+          id: string
+          negotiation_plan_id: string | null
+          notes: string | null
+          response_type: string | null
+          session_date: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string | null
+          id?: string
+          negotiation_plan_id?: string | null
+          notes?: string | null
+          response_type?: string | null
+          session_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string | null
+          id?: string
+          negotiation_plan_id?: string | null
+          notes?: string | null
+          response_type?: string | null
+          session_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_sessions_negotiation_plan_id_fkey"
+            columns: ["negotiation_plan_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -500,6 +937,211 @@ export type Database = {
           },
         ]
       }
+      plan_checkpoints: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          plan_id: string
+          target_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          plan_id: string
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          plan_id?: string
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_checkpoints_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_debt_priorities: {
+        Row: {
+          created_at: string | null
+          debt_name: string
+          id: string
+          plan_id: string
+          priority_order: number
+          strategy: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          debt_name: string
+          id?: string
+          plan_id: string
+          priority_order: number
+          strategy?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          debt_name?: string
+          id?: string
+          plan_id?: string
+          priority_order?: number
+          strategy?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_debt_priorities_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_essentials: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          plan_id: string
+          target_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          plan_id: string
+          target_value: number
+          updated_at?: string | null
+        }
+        Update: {
+          category: string
+          created_at?: string | null
+          id?: string
+          plan_id?: string
+          target_value?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_essentials_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_levers: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          goal_text: string
+          id: string
+          plan_id: string
+          success_criteria: string | null
+          updated_at: string | null
+          weekly_action: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          goal_text: string
+          id?: string
+          plan_id: string
+          success_criteria?: string | null
+          updated_at?: string | null
+          weekly_action?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          goal_text?: string
+          id?: string
+          plan_id?: string
+          success_criteria?: string | null
+          updated_at?: string | null
+          weekly_action?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_levers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          commitment_phrase: string | null
+          created_at: string | null
+          cycle_type: string
+          end_date: string | null
+          id: string
+          mode: string | null
+          start_date: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          commitment_phrase?: string | null
+          created_at?: string | null
+          cycle_type: string
+          end_date?: string | null
+          id?: string
+          mode?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          commitment_phrase?: string | null
+          created_at?: string | null
+          cycle_type?: string
+          end_date?: string | null
+          id?: string
+          mode?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -530,6 +1172,47 @@ export type Database = {
         }
         Relationships: []
       }
+      progress_dashboard: {
+        Row: {
+          certificate_generated_at: string | null
+          certificate_url: string | null
+          commitment_phrase: string | null
+          created_at: string | null
+          id: string
+          indicators: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          certificate_generated_at?: string | null
+          certificate_url?: string | null
+          commitment_phrase?: string | null
+          created_at?: string | null
+          id?: string
+          indicators?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          certificate_generated_at?: string | null
+          certificate_url?: string | null
+          commitment_phrase?: string | null
+          created_at?: string | null
+          id?: string
+          indicators?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_dashboard_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           description: string | null
@@ -556,6 +1239,56 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      shadow_expenses: {
+        Row: {
+          action_taken_at: string | null
+          comment: string | null
+          created_at: string | null
+          estimated_amount: number | null
+          frequency: string | null
+          id: string
+          monthly_limit: number | null
+          name: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_taken_at?: string | null
+          comment?: string | null
+          created_at?: string | null
+          estimated_amount?: number | null
+          frequency?: string | null
+          id?: string
+          monthly_limit?: number | null
+          name: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_taken_at?: string | null
+          comment?: string | null
+          created_at?: string | null
+          estimated_amount?: number | null
+          frequency?: string | null
+          id?: string
+          monthly_limit?: number | null
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shadow_expenses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
@@ -594,6 +1327,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string | null
+          date: string
+          description: string
+          id: string
+          is_shadow: boolean | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string | null
+          date: string
+          description: string
+          id?: string
+          is_shadow?: boolean | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          is_shadow?: boolean | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -665,6 +1448,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      variable_expenses: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string | null
+          id: string
+          is_essential: boolean | null
+          name: string
+          notes: string | null
+          spent_on: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_essential?: boolean | null
+          name: string
+          notes?: string | null
+          spent_on: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_essential?: boolean | null
+          name?: string
+          notes?: string | null
+          spent_on?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "variable_expenses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_ritual: {
         Row: {
@@ -759,116 +1589,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-    ? R
-    : never
+  ? R
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+    DefaultSchema["Views"])
+  ? (DefaultSchema["Tables"] &
+    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
+    Insert: infer I
+  }
+  ? I
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
+    Update: infer U
+  }
+  ? U
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Enums"]
+  | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["CompositeTypes"]
+  | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+  : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never
 
 export const Constants = {
   public: {
