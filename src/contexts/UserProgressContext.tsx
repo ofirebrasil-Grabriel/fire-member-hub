@@ -10,7 +10,9 @@ interface DayProgress {
   mood?: string;
   diaryEntry?: string;
   completedAt?: string;
-  payload?: Record<string, unknown>;
+  form_data?: Record<string, unknown>;
+  rewardClaimed?: boolean;
+  rewardTimestamp?: string;
 }
 
 interface UserProgress {
@@ -24,11 +26,13 @@ interface UserProgressContextType {
   progress: UserProgress;
   updateDayProgress: (dayId: number, updates: Partial<DayProgress>) => void;
   toggleTask: (dayId: number, taskId: string) => void;
-  completeDay: (dayId: number, payload?: Record<string, unknown>) => void;
+  completeDay: (dayId: number, form_data?: Record<string, unknown>) => void;
+  claimReward: (dayId: number) => Promise<void>;
   setUserName: (name: string) => void;
   getCompletedDaysCount: () => number;
   getProgressPercentage: () => number;
   canAccessDay: (dayId: number) => boolean;
+  isRewardClaimed: (dayId: number) => boolean;
   resetProgress: () => void;
 }
 
@@ -78,7 +82,9 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
           mood: row.mood || undefined,
           diaryEntry: row.diary_entry || undefined,
           completedAt: row.completed_at || undefined,
-          payload: row.payload || {},
+          form_data: (row.form_data as Record<string, unknown>) || {},
+          rewardClaimed: row.reward_claimed ?? false,
+          rewardTimestamp: row.reward_timestamp || undefined,
         };
         return acc;
       }, {});
@@ -109,11 +115,11 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
         user_id: user.id,
         day_id: dayId,
         completed: dayProgress.completed,
-        completed_tasks: dayProgress.completedTasks,
+        completed_tasks: dayProgress.completedTasks || [],
         mood: dayProgress.mood ?? null,
         diary_entry: dayProgress.diaryEntry ?? null,
         completed_at: dayProgress.completedAt ?? null,
-        payload: dayProgress.payload ?? {},
+        form_data: (dayProgress.form_data ?? {}) as any,
       },
       { onConflict: 'user_id,day_id' }
     );
@@ -128,14 +134,14 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
       const current = prev.daysProgress[dayId] || {
         completed: false,
         completedTasks: [],
-        payload: {},
+        form_data: {},
       };
 
       const nextDayProgress: DayProgress = {
         ...current,
         ...updates,
         completedTasks: updates.completedTasks ?? current.completedTasks ?? [],
-        payload: updates.payload ?? current.payload ?? {},
+        form_data: updates.form_data ?? current.form_data ?? {},
       };
 
       const nextProgress = {
@@ -153,7 +159,7 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const toggleTask = (dayId: number, taskId: string) => {
     setProgress((prev) => {
-      const current = prev.daysProgress[dayId] || { completed: false, completedTasks: [], payload: {} };
+      const current = prev.daysProgress[dayId] || { completed: false, completedTasks: [], form_data: {} };
       const completedTasks = current.completedTasks.includes(taskId)
         ? current.completedTasks.filter((id) => id !== taskId)
         : [...current.completedTasks, taskId];
@@ -176,15 +182,15 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
     });
   };
 
-  const completeDay = (dayId: number, payload?: Record<string, unknown>) => {
+  const completeDay = (dayId: number, form_data?: Record<string, unknown>) => {
     setProgress((prev) => {
-      const current = prev.daysProgress[dayId] || { completed: false, completedTasks: [], payload: {} };
+      const current = prev.daysProgress[dayId] || { completed: false, completedTasks: [], form_data: {} };
       const completedAt = new Date().toISOString();
       const nextDayProgress = {
         ...current,
         completed: true,
         completedAt,
-        payload: payload ?? current.payload ?? {},
+        form_data: form_data ?? current.form_data ?? {},
         completedTasks: current.completedTasks || [],
       };
 
@@ -246,7 +252,7 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
         mood: null,
         diary_entry: null,
         completed_at: null,
-        payload: {},
+        form_data: {},
       })
       .eq('user_id', user.id)
       .then(({ error }) => {
@@ -262,6 +268,44 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
       });
   };
 
+  const claimReward = async (dayId: number): Promise<void> => {
+    if (!user?.id) return;
+
+    const rewardTimestamp = new Date().toISOString();
+
+    setProgress((prev) => {
+      const current = prev.daysProgress[dayId] || { completed: false, completedTasks: [], form_data: {} };
+      return {
+        ...prev,
+        daysProgress: {
+          ...prev.daysProgress,
+          [dayId]: {
+            ...current,
+            rewardClaimed: true,
+            rewardTimestamp,
+          },
+        },
+      };
+    });
+
+    const { error } = await supabase
+      .from('day_progress')
+      .update({
+        reward_claimed: true,
+        reward_timestamp: rewardTimestamp,
+      })
+      .eq('user_id', user.id)
+      .eq('day_id', dayId);
+
+    if (error) {
+      console.error('Erro ao registrar recompensa:', error.message);
+    }
+  };
+
+  const isRewardClaimed = (dayId: number): boolean => {
+    return progress.daysProgress[dayId]?.rewardClaimed || false;
+  };
+
   return (
     <UserProgressContext.Provider
       value={{
@@ -269,10 +313,12 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
         updateDayProgress,
         toggleTask,
         completeDay,
+        claimReward,
         setUserName,
         getCompletedDaysCount,
         getProgressPercentage,
         canAccessDay,
+        isRewardClaimed,
         resetProgress,
       }}
     >
