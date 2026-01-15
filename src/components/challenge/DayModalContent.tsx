@@ -48,9 +48,8 @@ export const DayModalContent = ({ dayId }: DayModalContentProps) => {
         icon: <Sunrise className="h-4 w-4 text-primary" />,
         content: (
           <AudioExpandableCard
-            title="Mensagem Matinal"
-            emoji="🌅"
-            iconBgClass="bg-primary/10"
+            title="Tema do Dia:"
+            subtitle={day.subtitle || undefined}
             text={day.morningMessage}
             audioUrl={day.morningAudioUrl || undefined}
           />
@@ -66,10 +65,8 @@ export const DayModalContent = ({ dayId }: DayModalContentProps) => {
         icon: <Lightbulb className="h-4 w-4 text-warning" />,
         content: (
           <AudioExpandableCard
-            title="Conceito FIRE do Dia"
+            title="Conceito do Dia:"
             subtitle={day.conceptTitle || undefined}
-            icon={<Lightbulb className="h-5 w-5 text-warning" />}
-            iconBgClass="bg-warning/10"
             text={day.concept}
             audioUrl={day.conceptAudioUrl || undefined}
           />

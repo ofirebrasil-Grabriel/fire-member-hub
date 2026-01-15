@@ -26,7 +26,7 @@ export const AudioExpandableCard = ({
   subtitle,
   emoji,
   icon,
-  iconBgClass = 'bg-primary/10',
+  iconBgClass,
   text,
   audioUrl,
 }: AudioExpandableCardProps) => {
