@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { Database } from '@/integrations/supabase/types';
+import { Database, Json } from '@/integrations/supabase/types';
 
 export type DayProgress = Database['public']['Tables']['day_progress']['Row'];
 export type DayProgressInsert = Database['public']['Tables']['day_progress']['Insert'];
@@ -87,7 +87,7 @@ export const useDayProgress = () => {
                 day_id: dayId,
                 completed: true,
                 completed_at: new Date().toISOString(),
-                form_data: (formData || {}) as any,
+                form_data: (formData || {}) as Json,
                 updated_at: new Date().toISOString(),
             } as DayProgressInsert, {
                 onConflict: 'user_id,day_id',
@@ -118,7 +118,7 @@ export const useDayProgress = () => {
             .upsert({
                 user_id: user.id,
                 day_id: dayId,
-                form_data: mergedFormData as any,
+                form_data: mergedFormData as Json,
                 updated_at: new Date().toISOString(),
             } as DayProgressInsert, {
                 onConflict: 'user_id,day_id',

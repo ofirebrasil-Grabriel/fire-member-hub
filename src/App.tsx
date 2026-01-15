@@ -10,6 +10,7 @@ import DayPage from "./pages/DayPage";
 import ChallengePath from "./pages/ChallengePath";
 import Library from "./pages/Library";
 import Profile from "./pages/Profile";
+import Achievements from "./pages/Achievements";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./components/layout/AdminLayout";
@@ -71,7 +72,8 @@ const AppRoutes = () => (
     <Route path="/biblioteca" element={<ProtectedRoute><Library /></ProtectedRoute>} />
     <Route path="/recursos" element={<Navigate to="/biblioteca" replace />} />
     <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-    
+    <Route path="/conquistas" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+
     {/* Admin routes with sidebar layout */}
     <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
       <Route index element={<AdminDashboard />} />
@@ -82,7 +84,7 @@ const AppRoutes = () => (
       <Route path="webhooks" element={<AdminWebhooks />} />
       <Route path="settings" element={<AdminSettings />} />
     </Route>
-    
+
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

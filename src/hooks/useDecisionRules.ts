@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Database } from '@/integrations/supabase/types';
+import { Database, Json } from '@/integrations/supabase/types';
 
 export type TriggerType = 'anxiety' | 'boredom' | 'social_pressure' | 'tiredness' | 'family' | 'other';
 export type DefaultAction = 'pause_24h' | 'open_dashboard' | 'call_someone' | 'walk_10min' | 'breathe' | 'other';
@@ -50,9 +50,9 @@ export const useDecisionRules = () => {
             .upsert({
                 user_id: user.id,
                 ...input,
-                level_1: input.level_1 as any,
-                level_2: input.level_2 as any,
-                level_3: input.level_3 as any,
+                level_1: input.level_1 as unknown as Json,
+                level_2: input.level_2 as unknown as Json,
+                level_3: input.level_3 as unknown as Json,
                 updated_at: new Date().toISOString(),
             } as DecisionRulesInsert, {
                 onConflict: 'user_id',
@@ -119,9 +119,9 @@ export const useDecisionRules = () => {
             .from('decision_rules')
             .upsert({
                 user_id: user.id,
-                [levelKey]: actions as any,
+                [levelKey]: actions as unknown as Json,
                 updated_at: new Date().toISOString(),
-            } as any, {
+            } as DecisionRulesInsert, {
                 onConflict: 'user_id',
             });
 

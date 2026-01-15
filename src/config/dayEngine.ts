@@ -2,14 +2,14 @@
 // FIRE 15D - Day Engine Configuration
 // =============================================
 
-export type InputFieldType = 
-  | 'text' 
-  | 'number' 
-  | 'time' 
-  | 'checkbox' 
-  | 'slider' 
-  | 'select' 
-  | 'checkboxGroup' 
+export type InputFieldType =
+  | 'text'
+  | 'number'
+  | 'time'
+  | 'checkbox'
+  | 'slider'
+  | 'select'
+  | 'checkboxGroup'
   | 'textarea'
   | 'currency';
 
@@ -48,6 +48,7 @@ export interface DayConfig {
   crudType?: CrudType;
   outputMetrics: OutputMetric[];
   tips?: string[];
+  customComponent?: boolean;
 }
 
 export const PHASE_LABELS: Record<Phase, { label: string; color: string }> = {
@@ -67,18 +68,19 @@ export const DAY_ENGINE: DayConfig[] = [
     badge: "15 min",
     emoji: "🎯",
     phase: 'dossie',
+    customComponent: true,
     inputs: [
-      { 
-        name: 'fixed_time', 
-        label: 'Horário fixo para o desafio', 
-        type: 'time', 
+      {
+        name: 'fixed_time',
+        label: 'Horário fixo para o desafio',
+        type: 'time',
         required: true,
         placeholder: '08:00'
       },
-      { 
-        name: 'sources', 
-        label: 'Quais são suas fontes de dívidas?', 
-        type: 'checkboxGroup', 
+      {
+        name: 'sources',
+        label: 'Quais são suas fontes de dívidas?',
+        type: 'checkboxGroup',
         options: [
           { value: 'banks', label: '🏦 Bancos' },
           { value: 'cards', label: '💳 Cartões' },
@@ -87,25 +89,25 @@ export const DAY_ENGINE: DayConfig[] = [
           { value: 'utilities', label: '💡 Contas de Consumo' },
         ]
       },
-      { 
-        name: 'anxiety_score', 
-        label: 'Ansiedade ao pensar em dinheiro', 
+      {
+        name: 'anxiety_score',
+        label: 'Ansiedade ao pensar em dinheiro',
         type: 'slider',
         min: 0,
         max: 10
       },
-      { 
-        name: 'clarity_score', 
-        label: 'Clareza sobre suas finanças', 
+      {
+        name: 'clarity_score',
+        label: 'Clareza sobre suas finanças',
         type: 'slider',
         min: 0,
         max: 10
       },
-      { 
-        name: 'commitment', 
-        label: 'Comprometo-me a não fazer novas parcelas por 15 dias', 
-        type: 'checkbox', 
-        required: true 
+      {
+        name: 'commitment',
+        label: 'Comprometo-me a não fazer novas parcelas por 15 dias',
+        type: 'checkbox',
+        required: true
       },
     ],
     outputMetrics: [
@@ -127,6 +129,7 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "🔦",
     phase: 'dossie',
     crudType: 'debts',
+    customComponent: true,
     inputs: [],
     outputMetrics: [
       { key: 'totalDebts', label: 'Total de dívidas', format: 'number', icon: '📋' },
@@ -147,6 +150,7 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "📅",
     phase: 'dossie',
     crudType: 'calendar',
+    customComponent: true,
     inputs: [],
     outputMetrics: [
       { key: 'totalItems', label: 'Itens no calendário', format: 'number', icon: '📅' },
@@ -167,40 +171,40 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "📊",
     phase: 'dossie',
     inputs: [
-      { 
-        name: 'income', 
-        label: 'Renda mensal total', 
-        type: 'currency', 
+      {
+        name: 'income',
+        label: 'Renda mensal total',
+        type: 'currency',
         required: true,
         placeholder: '3000.00'
       },
-      { 
-        name: 'alimentacao', 
-        label: 'Alimentação', 
+      {
+        name: 'alimentacao',
+        label: 'Alimentação',
         type: 'currency',
         placeholder: '800.00'
       },
-      { 
-        name: 'transporte', 
-        label: 'Transporte', 
+      {
+        name: 'transporte',
+        label: 'Transporte',
         type: 'currency',
         placeholder: '300.00'
       },
-      { 
-        name: 'moradia', 
-        label: 'Moradia (aluguel/condomínio)', 
+      {
+        name: 'moradia',
+        label: 'Moradia (aluguel/condomínio)',
         type: 'currency',
         placeholder: '1000.00'
       },
-      { 
-        name: 'saude', 
-        label: 'Saúde', 
+      {
+        name: 'saude',
+        label: 'Saúde',
         type: 'currency',
         placeholder: '200.00'
       },
-      { 
-        name: 'minimum_debts', 
-        label: 'Mínimo das dívidas (parcelas)', 
+      {
+        name: 'minimum_debts',
+        label: 'Mínimo das dívidas (parcelas)',
         type: 'currency',
         placeholder: '500.00'
       },
@@ -226,15 +230,15 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "🛑",
     phase: 'contencao',
     inputs: [
-      { 
-        name: 'weekly_limit', 
-        label: 'Limite semanal do cartão', 
+      {
+        name: 'weekly_limit',
+        label: 'Limite semanal do cartão',
         type: 'currency',
         placeholder: '200.00'
       },
-      { 
-        name: 'installment_rule', 
-        label: 'Regra de parcelamento', 
+      {
+        name: 'installment_rule',
+        label: 'Regra de parcelamento',
         type: 'select',
         options: [
           { value: 'never', label: '🚫 Nunca parcelar' },
@@ -242,9 +246,9 @@ export const DAY_ENGINE: DayConfig[] = [
         ],
         required: true
       },
-      { 
-        name: 'blocked_categories', 
-        label: 'Gastos proibidos por 15 dias', 
+      {
+        name: 'blocked_categories',
+        label: 'Gastos proibidos por 15 dias',
         type: 'checkboxGroup',
         options: [
           { value: 'delivery', label: '🍕 Delivery' },
@@ -295,21 +299,21 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "📝",
     phase: 'contencao',
     inputs: [
-      { 
-        name: 'essentials_total', 
-        label: 'Total essenciais (do Dia 4)', 
+      {
+        name: 'essentials_total',
+        label: 'Total essenciais (do Dia 4)',
         type: 'currency',
         required: true
       },
-      { 
-        name: 'critical_bills', 
-        label: 'Contas críticas (do calendário)', 
+      {
+        name: 'critical_bills',
+        label: 'Contas críticas (do calendário)',
         type: 'currency',
         required: true
       },
-      { 
-        name: 'leisure_minimum', 
-        label: 'Lazer mínimo (opcional)', 
+      {
+        name: 'leisure_minimum',
+        label: 'Lazer mínimo (opcional)',
         type: 'currency',
         placeholder: '100.00'
       },
@@ -333,16 +337,16 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "📞",
     phase: 'contencao',
     inputs: [
-      { 
-        name: 'selected_bill', 
-        label: 'Conta escolhida', 
+      {
+        name: 'selected_bill',
+        label: 'Conta escolhida',
         type: 'text',
         required: true,
         placeholder: 'Ex: Internet, Telefone, Seguro...'
       },
-      { 
-        name: 'action_type', 
-        label: 'Ação realizada', 
+      {
+        name: 'action_type',
+        label: 'Ação realizada',
         type: 'select',
         options: [
           { value: 'reduce', label: '📉 Reduzir plano' },
@@ -352,9 +356,9 @@ export const DAY_ENGINE: DayConfig[] = [
         ],
         required: true
       },
-      { 
-        name: 'monthly_savings', 
-        label: 'Economia mensal conseguida', 
+      {
+        name: 'monthly_savings',
+        label: 'Economia mensal conseguida',
         type: 'currency',
         required: true
       },
@@ -380,34 +384,34 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "🎯",
     phase: 'acordos',
     inputs: [
-      { 
-        name: 'priority_1', 
-        label: 'Prioridade #1', 
+      {
+        name: 'priority_1',
+        label: 'Prioridade #1',
         type: 'text',
         required: true,
         placeholder: 'Nome do credor'
       },
-      { 
-        name: 'priority_2', 
-        label: 'Prioridade #2', 
+      {
+        name: 'priority_2',
+        label: 'Prioridade #2',
         type: 'text',
         placeholder: 'Nome do credor'
       },
-      { 
-        name: 'priority_3', 
-        label: 'Prioridade #3', 
+      {
+        name: 'priority_3',
+        label: 'Prioridade #3',
         type: 'text',
         placeholder: 'Nome do credor'
       },
-      { 
-        name: 'priority_4', 
-        label: 'Prioridade #4', 
+      {
+        name: 'priority_4',
+        label: 'Prioridade #4',
         type: 'text',
         placeholder: 'Nome do credor'
       },
-      { 
-        name: 'priority_5', 
-        label: 'Prioridade #5', 
+      {
+        name: 'priority_5',
+        label: 'Prioridade #5',
         type: 'text',
         placeholder: 'Nome do credor'
       },
@@ -430,23 +434,23 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "📋",
     phase: 'acordos',
     inputs: [
-      { 
-        name: 'max_entry', 
-        label: 'Entrada máxima que posso pagar', 
+      {
+        name: 'max_entry',
+        label: 'Entrada máxima que posso pagar',
         type: 'currency',
         required: true,
         placeholder: '500.00'
       },
-      { 
-        name: 'max_installment', 
-        label: 'Parcela máxima mensal', 
+      {
+        name: 'max_installment',
+        label: 'Parcela máxima mensal',
         type: 'currency',
         required: true,
         placeholder: '200.00'
       },
-      { 
-        name: 'anti_fraud_check', 
-        label: 'Checklist anti-golpe', 
+      {
+        name: 'anti_fraud_check',
+        label: 'Checklist anti-golpe',
         type: 'checkboxGroup',
         options: [
           { value: 'official_channel', label: '✅ Usar apenas canais oficiais' },
@@ -515,46 +519,46 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "📈",
     phase: 'motor',
     inputs: [
-      { 
-        name: 'goal_30_1', 
-        label: 'Meta 30 dias #1', 
+      {
+        name: 'goal_30_1',
+        label: 'Meta 30 dias #1',
         type: 'text',
         required: true,
         placeholder: 'Ex: Quitar dívida X'
       },
-      { 
-        name: 'goal_30_2', 
-        label: 'Meta 30 dias #2', 
+      {
+        name: 'goal_30_2',
+        label: 'Meta 30 dias #2',
         type: 'text',
         placeholder: 'Ex: Reduzir conta de luz'
       },
-      { 
-        name: 'goal_30_3', 
-        label: 'Meta 30 dias #3', 
+      {
+        name: 'goal_30_3',
+        label: 'Meta 30 dias #3',
         type: 'text',
         placeholder: 'Ex: Criar reserva de R$200'
       },
-      { 
-        name: 'goal_60_1', 
-        label: 'Meta 60 dias #1', 
+      {
+        name: 'goal_60_1',
+        label: 'Meta 60 dias #1',
         type: 'text',
         placeholder: 'Ex: Quitar mais 2 dívidas'
       },
-      { 
-        name: 'goal_60_2', 
-        label: 'Meta 60 dias #2', 
+      {
+        name: 'goal_60_2',
+        label: 'Meta 60 dias #2',
         type: 'text',
         placeholder: 'Ex: Reserva de R$500'
       },
-      { 
-        name: 'goal_90_1', 
-        label: 'Meta 90 dias #1', 
+      {
+        name: 'goal_90_1',
+        label: 'Meta 90 dias #1',
         type: 'text',
         placeholder: 'Ex: Todas as dívidas negociadas'
       },
-      { 
-        name: 'goal_90_2', 
-        label: 'Meta 90 dias #2', 
+      {
+        name: 'goal_90_2',
+        label: 'Meta 90 dias #2',
         type: 'text',
         placeholder: 'Ex: Reserva de emergência 1 mês'
       },
@@ -578,9 +582,9 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "🔄",
     phase: 'motor',
     inputs: [
-      { 
-        name: 'day_of_week', 
-        label: 'Dia do ritual semanal', 
+      {
+        name: 'day_of_week',
+        label: 'Dia do ritual semanal',
         type: 'select',
         options: [
           { value: '0', label: '🌅 Domingo' },
@@ -593,9 +597,9 @@ export const DAY_ENGINE: DayConfig[] = [
         ],
         required: true
       },
-      { 
-        name: 'checklist', 
-        label: 'Itens do checklist semanal', 
+      {
+        name: 'checklist',
+        label: 'Itens do checklist semanal',
         type: 'checkboxGroup',
         options: [
           { value: 'review_calendar', label: '📅 Revisar vencimentos da semana' },
@@ -625,9 +629,9 @@ export const DAY_ENGINE: DayConfig[] = [
     emoji: "🎓",
     phase: 'motor',
     inputs: [
-      { 
-        name: 'week_action', 
-        label: 'Ação da semana', 
+      {
+        name: 'week_action',
+        label: 'Ação da semana',
         type: 'select',
         options: [
           { value: 'negotiate', label: '🤝 Negociar uma dívida' },
@@ -638,16 +642,16 @@ export const DAY_ENGINE: DayConfig[] = [
         ],
         required: true
       },
-      { 
-        name: 'action_detail', 
-        label: 'Detalhe da ação', 
+      {
+        name: 'action_detail',
+        label: 'Detalhe da ação',
         type: 'text',
         required: true,
         placeholder: 'Ex: Ligar para Nubank às 10h de terça'
       },
-      { 
-        name: 'action_date', 
-        label: 'Data/hora agendada', 
+      {
+        name: 'action_date',
+        label: 'Data/hora agendada',
         type: 'text',
         required: true,
         placeholder: 'Ex: Terça, 14h'

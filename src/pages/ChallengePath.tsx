@@ -228,7 +228,7 @@ const ChallengePath = () => {
           </p>
         </div>
 
-        <div className="space-y-5">
+        <div className="justify-center items-center space-y-5">
           <ChallengeTrack
             items={DAY_ENGINE.map((day) => {
               const dayContent = dayContentMap.get(day.id);
@@ -260,6 +260,10 @@ const ChallengePath = () => {
             }
           }}
           onCompleted={handleCompleted}
+          onNavigateToNextDay={(nextDayId) => {
+            setSelectedDay(nextDayId);
+            setSearchParams({ day: String(nextDayId) });
+          }}
         />
       )}
 

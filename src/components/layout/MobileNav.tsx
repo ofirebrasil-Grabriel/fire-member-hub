@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Flame, User } from 'lucide-react';
+import { Flame, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { icon: Flame, label: 'Desafio', path: '/' },
+  { icon: Trophy, label: 'Conquistas', path: '/conquistas' },
   { icon: User, label: 'Perfil', path: '/perfil' },
 ];
 
@@ -17,19 +18,19 @@ export const MobileNav = () => {
           const isChallengeRoute = item.path === '/';
           const isActive = isChallengeRoute
             ? location.pathname === '/' ||
-              location.pathname.startsWith('/app') ||
-              location.pathname.startsWith('/desafio') ||
-              location.pathname.startsWith('/dia/')
+            location.pathname.startsWith('/app') ||
+            location.pathname.startsWith('/desafio') ||
+            location.pathname.startsWith('/dia/')
             : location.pathname.startsWith(item.path);
-          
+
           return (
             <Link
               key={item.path}
               to={item.path}
               className={cn(
                 "flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-all duration-200",
-                isActive 
-                  ? "text-primary" 
+                isActive
+                  ? "text-primary"
                   : "text-muted-foreground"
               )}
             >

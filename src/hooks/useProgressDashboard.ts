@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Database } from '@/integrations/supabase/types';
+import { Database, Json } from '@/integrations/supabase/types';
 
 export interface ProgressIndicator {
     key: string;
@@ -56,7 +56,7 @@ export const useProgressDashboard = () => {
             .upsert({
                 user_id: user.id,
                 ...input,
-                indicators: input.indicators as any,
+                indicators: input.indicators as unknown as Json,
                 updated_at: new Date().toISOString(),
             } as ProgressDashboardInsert, {
                 onConflict: 'user_id',
@@ -89,7 +89,7 @@ export const useProgressDashboard = () => {
         const { error } = await supabase
             .from('progress_dashboard')
             .update({
-                indicators: updatedIndicators as any,
+                indicators: updatedIndicators as unknown as Json,
                 updated_at: new Date().toISOString(),
             } as ProgressDashboardUpdate)
             .eq('user_id', user.id);

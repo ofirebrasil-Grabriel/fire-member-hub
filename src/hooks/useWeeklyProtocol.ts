@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Database } from '@/integrations/supabase/types';
+import { Database, Json } from '@/integrations/supabase/types';
 
 export type WeeklyChecklistItem = {
     id: string;
@@ -45,9 +45,9 @@ export const useWeeklyProtocol = () => {
             .upsert({
                 user_id: user.id,
                 ...input,
-                checklist: input.checklist as any,
+                checklist: input.checklist as unknown as Json,
                 updated_at: new Date().toISOString(),
-            } as any, {
+            } as WeeklyRitualInsert, {
                 onConflict: 'user_id',
             })
             .select()
@@ -68,9 +68,9 @@ export const useWeeklyProtocol = () => {
             .from('weekly_ritual')
             .upsert({
                 user_id: user.id,
-                checklist: checklist as any,
+                checklist: checklist as unknown as Json,
                 updated_at: new Date().toISOString(),
-            } as any, {
+            } as WeeklyRitualInsert, {
                 onConflict: 'user_id',
             });
 

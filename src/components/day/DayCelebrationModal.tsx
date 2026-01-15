@@ -1,31 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Award, Sparkles, Download, Share2 } from 'lucide-react';
+import { X, Award, Sparkles, Download, Share2, ArrowRight, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { useUserProgress } from '@/contexts/UserProgressContext';
+import { useAchievements } from '@/hooks/useAchievements';
+import { toast } from '@/hooks/use-toast';
 
 interface DayCelebrationModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onContinue?: () => void;
     dayId: number;
     dayTitle: string;
     motivationPhrase: string;
     rewardLabel: string;
     rewardIcon?: string;
+    xpReward?: number;
 }
 
 const DayCelebrationModal: React.FC<DayCelebrationModalProps> = ({
     isOpen,
     onClose,
+    onContinue,
     dayId,
     dayTitle,
     motivationPhrase,
     rewardLabel,
     rewardIcon = 'award',
+    xpReward = 100,
 }) => {
-    const { claimReward, isRewardClaimed } = useUserProgress();
+    const { claimReward, isRewardClaimed, progress } = useUserProgress();
+    const { claimAchievement } = useAchievements();
     const [claimed, setClaimed] = useState(false);
+    const [xpEarned, setXpEarned] = useState(0);
 
     useEffect(() => {
         if (isOpen && !isRewardClaimed(dayId)) {
@@ -62,13 +70,92 @@ const DayCelebrationModal: React.FC<DayCelebrationModalProps> = ({
     }, [isOpen, dayId, isRewardClaimed]);
 
     const handleClaimReward = async () => {
+        // Save to day_progress
         await claimReward(dayId);
+
+        // Save to achievements table with XP
+        const success = await claimAchievement(
+            dayId,
+            dayTitle,
+            motivationPhrase,
+            rewardLabel,
+            xpReward
+        );
+
+        if (success) {
+            setXpEarned(xpReward);
+            toast({ title: `+${xpReward} XP ganho!`, description: 'Conquista salva!' });
+        }
+
         setClaimed(true);
     };
 
     const getIconComponent = () => {
         // Retorna ícone baseado no rewardIcon string
         return <Award className="h-16 w-16 text-yellow-400" />;
+    };
+
+    const handleDownloadPDF = async () => {
+        try {
+            const { generateDayReport } = await import('@/lib/printReport');
+            const { generateDayAnalysis } = await import('@/lib/dayAnalysis');
+
+            const formData = progress.daysProgress[dayId]?.form_data as Record<string, unknown> || {};
+            const completedAt = progress.daysProgress[dayId]?.completedAt || new Date().toISOString();
+            const analysis = generateDayAnalysis(dayId, formData);
+
+            await generateDayReport({
+                dayId,
+                dayTitle,
+                completedAt,
+                metrics: [],
+                formData,
+                analysis,
+                userName: progress.userName,
+                motivationPhrase,
+                xpEarned: xpReward,
+            });
+
+            toast({ title: 'PDF gerado com sucesso!' });
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast({ title: 'Erro ao gerar PDF', variant: 'destructive' });
+        }
+    };
+
+    const handleShare = async () => {
+        const shareText = `🔥 Completei o Dia ${dayId} do Desafio FIRE 15D! ${dayTitle}`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Desafio FIRE 15D',
+                    text: shareText,
+                    url: window.location.href,
+                });
+            } catch (error) {
+                // User cancelled or error
+                if ((error as Error).name !== 'AbortError') {
+                    await copyToClipboard(shareText);
+                }
+            }
+        } else {
+            await copyToClipboard(shareText);
+        }
+    };
+
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast({ title: 'Copiado para a área de transferência!' });
+        } catch {
+            toast({ title: 'Não foi possível copiar', variant: 'destructive' });
+        }
+    };
+
+    const handleContinue = () => {
+        onClose();
+        onContinue?.();
     };
 
     if (!isOpen) return null;
@@ -186,7 +273,7 @@ const DayCelebrationModal: React.FC<DayCelebrationModalProps> = ({
                                         <Button
                                             variant="outline"
                                             className="flex-1 border-white/20 text-white hover:bg-white/10"
-                                            onClick={onClose}
+                                            onClick={handleDownloadPDF}
                                         >
                                             <Download className="mr-2 h-4 w-4" />
                                             Baixar PDF
@@ -194,7 +281,7 @@ const DayCelebrationModal: React.FC<DayCelebrationModalProps> = ({
                                         <Button
                                             variant="outline"
                                             className="flex-1 border-white/20 text-white hover:bg-white/10"
-                                            onClick={onClose}
+                                            onClick={handleShare}
                                         >
                                             <Share2 className="mr-2 h-4 w-4" />
                                             Compartilhar
@@ -205,9 +292,10 @@ const DayCelebrationModal: React.FC<DayCelebrationModalProps> = ({
                                 <Button
                                     variant="ghost"
                                     className="text-white/60 hover:text-white hover:bg-white/10"
-                                    onClick={onClose}
+                                    onClick={handleContinue}
                                 >
-                                    Continuar para o próximo dia
+                                    <ArrowRight className="mr-2 h-4 w-4" />
+                                    {dayId < 15 ? 'Continuar para o próximo dia' : 'Finalizar desafio'}
                                 </Button>
                             </motion.div>
                         </div>

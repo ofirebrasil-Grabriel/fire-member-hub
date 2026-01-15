@@ -127,7 +127,7 @@ const Day2Stepper: React.FC<Day2StepperProps> = ({ onComplete }) => {
                     await expenseHook.create({
                         name: expense.name,
                         amount: expense.amount,
-                        category: expense.category as any,
+                        category: expense.category as FixedExpense['category'],
                         due_date: expense.due_date,
                     });
                 }
@@ -158,10 +158,10 @@ const Day2Stepper: React.FC<Day2StepperProps> = ({ onComplete }) => {
                         <div className="flex flex-col items-center">
                             <div
                                 className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${index < currentStep
-                                        ? 'bg-green-500 text-white'
-                                        : index === currentStep
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'bg-muted text-muted-foreground'
+                                    ? 'bg-green-500 text-white'
+                                    : index === currentStep
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted text-muted-foreground'
                                     }`}
                             >
                                 {index < currentStep ? <Check className="h-5 w-5" /> : index + 1}

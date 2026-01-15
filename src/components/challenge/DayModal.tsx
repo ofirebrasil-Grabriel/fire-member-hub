@@ -12,8 +12,8 @@ import { useUserProgress } from '@/contexts/UserProgressContext';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useDay } from '@/hooks/useDays';
-import Day1Form from '@/components/day/Day1Form';
-import Day2Stepper from '@/components/day/Day2Stepper';
+import DayTaskTab from '@/components/day/DayTaskTab';
+import DayCompletedTab from '@/components/day/DayCompletedTab';
 import DayCelebrationModal from '@/components/day/DayCelebrationModal';
 
 interface DayModalProps {
@@ -21,25 +21,38 @@ interface DayModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCompleted?: (dayId: number, payload?: Record<string, unknown>) => void;
+  onNavigateToNextDay?: (nextDayId: number) => void;
 }
 
 type ModalPhase = 'input' | 'crud' | 'output';
 
-export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalProps) => {
+export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToNextDay }: DayModalProps) => {
   const { user } = useAuth();
   const { progress } = useUserProgress();
   const config = useMemo(() => getDayConfig(dayId), [dayId]);
   const { day } = useDay(dayId);
   const [phase, setPhase] = useState<ModalPhase>('input');
-  const [panel, setPanel] = useState<'conteudo' | 'execucao'>('conteudo');
+  const [panel, setPanel] = useState<'conteudo' | 'tarefa' | 'concluido'>('conteudo');
   const [payload, setPayload] = useState<Record<string, unknown>>({});
   const [metrics, setMetrics] = useState<OutputMetricValue[]>([]);
   const [saving, setSaving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (!config) return;
-    const nextPhase: ModalPhase = config.inputs.length > 0 ? 'input' : config.crudType ? 'crud' : 'output';
+    // Se tiver customComponent, pula direto para a aba de execução
+    // Se não, segue a lógica normal
+    let nextPhase: ModalPhase;
+    if (config.customComponent) {
+      nextPhase = 'output'; // Custom components handle their own flow
+    } else if (config.inputs.length > 0) {
+      nextPhase = 'input';
+    } else if (config.crudType) {
+      nextPhase = 'crud';
+    } else {
+      nextPhase = 'output';
+    }
     setPhase(nextPhase);
     setPanel('conteudo');
     setPayload({});
@@ -74,7 +87,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
       const result = await completeDay(dayId, values, user.id);
       setMetrics(result);
       setPhase('output');
-      setPanel('execucao');
+      setPanel('concluido');
       setShowCelebration(true);
       onCompleted?.(dayId, values);
     } catch (error: unknown) {
@@ -163,16 +176,29 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
                       >
                         Tema do dia
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setPanel('execucao')}
-                        className={cn(
-                          'flex-1 rounded-full px-2 py-1.5 text-center transition-colors sm:px-3 sm:py-2',
-                          panel === 'execucao' && 'bg-background text-foreground shadow-sm'
-                        )}
-                      >
-                        Tarefa do dia
-                      </button>
+                      {!isCompleted ? (
+                        <button
+                          type="button"
+                          onClick={() => setPanel('tarefa')}
+                          className={cn(
+                            'flex-1 rounded-full px-2 py-1.5 text-center transition-colors sm:px-3 sm:py-2',
+                            panel === 'tarefa' && 'bg-background text-foreground shadow-sm'
+                          )}
+                        >
+                          Tarefa do dia
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setPanel('concluido')}
+                          className={cn(
+                            'flex-1 rounded-full px-2 py-1.5 text-center transition-colors sm:px-3 sm:py-2',
+                            panel === 'concluido' && 'bg-background text-foreground shadow-sm'
+                          )}
+                        >
+                          ✅ Desafio concluído
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -183,50 +209,46 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
                   <DayModalContent dayId={dayId} />
                 )}
 
-                {panel === 'execucao' && (
+                {panel === 'tarefa' && (
+                  <DayTaskTab
+                    dayId={dayId}
+                    config={config}
+                    defaultValues={defaultValues as Record<string, unknown>}
+                    onComplete={handleCompleteDay}
+                    onInputSubmit={handleInputSubmit}
+                    onCrudComplete={handleCrudComplete}
+                    phase={phase}
+                    payload={payload}
+                    isLoading={saving}
+                  />
+                )}
+
+                {panel === 'concluido' && (
                   <>
-                    {dayId === 1 && !isCompleted && phase !== 'output' && (
-                      <Day1Form
-                        onComplete={handleCompleteDay}
+                    {isEditing ? (
+                      <DayTaskTab
+                        dayId={dayId}
+                        config={config}
                         defaultValues={defaultValues as Record<string, unknown>}
+                        onComplete={(values) => {
+                          handleCompleteDay(values);
+                          setIsEditing(false);
+                        }}
+                        onInputSubmit={handleInputSubmit}
+                        onCrudComplete={handleCrudComplete}
+                        phase={phase}
+                        payload={payload}
+                        isLoading={saving}
                       />
-                    )}
-
-                    {dayId === 2 && !isCompleted && phase !== 'output' && (
-                      <Day2Stepper
-                        onComplete={handleCompleteDay}
-                        defaultValues={defaultValues as Record<string, unknown>}
+                    ) : (
+                      <DayCompletedTab
+                        dayId={dayId}
+                        dayTitle={day?.title || config.title}
+                        completedAt={progress.daysProgress[dayId]?.completedAt || new Date().toISOString()}
+                        metrics={metrics.length > 0 ? metrics : []}
+                        formData={defaultValues as Record<string, unknown> || {}}
+                        onEdit={() => setIsEditing(true)}
                       />
-                    )}
-
-                    {((dayId !== 1 && dayId !== 2) || isCompleted || phase === 'output') && (
-                      <>
-                        {day?.commitment && (
-                          <div className="glass-card p-4">
-                            <h4 className="text-sm font-semibold">Seu compromisso</h4>
-                            <p className="mt-2 text-sm text-muted-foreground">{day.commitment}</p>
-                          </div>
-                        )}
-                        {phase === 'input' && (
-                          <DayInputForm
-                            inputs={config.inputs}
-                            onSubmit={handleInputSubmit}
-                            defaultValues={defaultValues}
-                            submitLabel={config.crudType ? 'Continuar' : 'Concluir dia'}
-                            isSubmitting={saving}
-                          />
-                        )}
-
-                        {phase === 'crud' && (
-                          <div className="space-y-6">
-                            <CrudSection type={config.crudType as CrudType} />
-                          </div>
-                        )}
-
-                        {phase === 'output' && (
-                          <OutputPanel metrics={metrics} nextDay={dayId < 15 ? dayId + 1 : null} />
-                        )}
-                      </>
                     )}
                   </>
                 )}
@@ -235,6 +257,12 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
               <DayCelebrationModal
                 isOpen={showCelebration}
                 onClose={() => setShowCelebration(false)}
+                onContinue={() => {
+                  onOpenChange(false);
+                  if (dayId < 15 && onNavigateToNextDay) {
+                    onNavigateToNextDay(dayId + 1);
+                  }
+                }}
                 dayId={dayId}
                 dayTitle={day?.title || config.title}
                 motivationPhrase={day?.motivationPhrase || ''}
@@ -243,7 +271,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted }: DayModalPro
               />
 
               {/* Footer fixo para o botão no mobile */}
-              {panel === 'execucao' && phase === 'crud' && (
+              {panel === 'tarefa' && phase === 'crud' && (
                 <div className="sticky bottom-0 border-t border-border/50 bg-popover/95 p-4 backdrop-blur-sm">
                   <Button className="btn-fire w-full sm:w-auto sm:ml-auto sm:block" onClick={handleCrudComplete} disabled={saving}>
                     {saving ? 'Salvando...' : 'Concluir dia'}

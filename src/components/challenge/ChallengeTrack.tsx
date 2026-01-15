@@ -244,7 +244,7 @@ export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
               className="relative h-full"
               initial="hidden"
               whileInView="show"
-              viewport={{ once: true, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.01 }}
             >
               {items.map((item, index) => {
                 const isLeft = index % 2 !== 0;

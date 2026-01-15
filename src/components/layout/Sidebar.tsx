@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Flame,
   User,
+  Trophy,
   Settings,
   ChevronLeft,
   ChevronRight
@@ -9,20 +10,26 @@ import {
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useUserProgress } from '@/contexts/UserProgressContext';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const menuItems = [
-  { icon: Flame, label: 'Desafio', path: '/' },
-  { icon: User, label: 'Perfil', path: '/perfil' },
-  { icon: Settings, label: 'Admin', path: '/admin' },
+  { icon: Flame, label: 'Desafio', path: '/', adminOnly: false },
+  { icon: Trophy, label: 'Conquistas', path: '/conquistas', adminOnly: false },
+  { icon: User, label: 'Perfil', path: '/perfil', adminOnly: false },
+  { icon: Settings, label: 'Admin', path: '/admin', adminOnly: true },
 ];
 
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { progress, getProgressPercentage } = useUserProgress();
+  const { isAdmin } = useAdmin();
+
+  // Filter menu items based on admin status
+  const visibleMenuItems = menuItems.filter(item => !item.adminOnly || isAdmin);
 
   return (
-    <aside 
+    <aside
       className={cn(
         "fixed left-0 top-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 z-50 flex flex-col",
         collapsed ? "w-20" : "w-64"
@@ -48,7 +55,7 @@ export const Sidebar = () => {
               <span className="text-sm font-semibold text-fire">{getProgressPercentage()}%</span>
             </div>
             <div className="h-2 bg-background rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-fire rounded-full transition-all duration-500"
                 style={{ width: `${getProgressPercentage()}%` }}
               />
@@ -59,23 +66,23 @@ export const Sidebar = () => {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const isChallengeRoute = item.path === '/';
           const isActive = isChallengeRoute
             ? location.pathname === '/' ||
-              location.pathname.startsWith('/app') ||
-              location.pathname.startsWith('/desafio') ||
-              location.pathname.startsWith('/dia/')
+            location.pathname.startsWith('/app') ||
+            location.pathname.startsWith('/desafio') ||
+            location.pathname.startsWith('/dia/')
             : location.pathname.startsWith(item.path);
-          
+
           return (
             <Link
               key={item.path}
               to={item.path}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                isActive 
-                  ? "bg-primary/15 text-primary" 
+                isActive
+                  ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
                 collapsed && "justify-center px-3"
               )}

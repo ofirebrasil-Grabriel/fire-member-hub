@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { DAY_ENGINE, DayConfig, OutputMetric } from '@/config/dayEngine';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface OutputMetricValue extends OutputMetric {
   value: string | number;
@@ -396,7 +397,7 @@ export const completeDay = async (
       day_id: dayId,
       completed: true,
       completed_at: new Date().toISOString(),
-      payload,
+      form_data: payload as unknown as Json,
     },
     { onConflict: 'user_id,day_id' }
   );
