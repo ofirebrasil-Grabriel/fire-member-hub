@@ -25,7 +25,8 @@ export interface InputField {
   required?: boolean;
   min?: number;
   max?: number;
-  defaultValue?: any;
+  defaultValue?: unknown;
+  helperText?: string;
 }
 
 export interface OutputMetric {

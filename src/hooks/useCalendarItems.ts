@@ -11,9 +11,9 @@ export interface CalendarItem {
   due_date: string | null;
   is_fixed: boolean | null;
   is_critical: boolean | null;
+  paid: boolean | null;
   source_debt_id: string | null;
   created_at: string | null;
-  updated_at: string | null;
 }
 
 export interface CalendarItemInput {

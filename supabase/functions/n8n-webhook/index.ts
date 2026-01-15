@@ -106,14 +106,17 @@ Deno.serve(async (req) => {
           .eq('day_id', milestone)
           .eq('completed', true);
 
-        const users = (milestoneUsers || []).map((item: {
+        interface MilestoneUserRow {
           user_id: string;
+          day_id: number;
           completed_at: string | null;
-          profiles?: { email?: string | null; full_name?: string | null } | null;
-        }) => ({
+          profiles: { email: string | null; full_name: string | null }[];
+        }
+
+        const users = (milestoneUsers as MilestoneUserRow[] || []).map((item) => ({
           user_id: item.user_id,
-          email: item.profiles?.email,
-          name: item.profiles?.full_name,
+          email: item.profiles?.[0]?.email ?? null,
+          name: item.profiles?.[0]?.full_name ?? null,
           completed_at: item.completed_at,
         }));
 

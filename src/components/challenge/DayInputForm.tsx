@@ -170,6 +170,7 @@ export const DayInputForm = ({
                           return (
                             <Textarea
                               {...field}
+                              value={String(field.value ?? '')}
                               rows={4}
                               placeholder={input.placeholder}
                               className={textAreaClassName}
@@ -239,11 +240,11 @@ export const DayInputForm = ({
                           );
                         }
                         case 'time':
-                        case 'date':
                         case 'number':
                           return (
                             <Input
                               {...field}
+                              value={String(field.value ?? '')}
                               type={input.type}
                               placeholder={input.placeholder || (input.type === 'time' ? '--:--' : undefined)}
                               className={fieldClassName}
@@ -253,6 +254,7 @@ export const DayInputForm = ({
                           return (
                             <Input
                               {...field}
+                              value={String(field.value ?? '')}
                               inputMode="decimal"
                               placeholder={input.placeholder || 'R$ 0,00'}
                               className={fieldClassName}
@@ -262,6 +264,7 @@ export const DayInputForm = ({
                           return (
                             <Input
                               {...field}
+                              value={String(field.value ?? '')}
                               placeholder={input.placeholder}
                               className={fieldClassName}
                             />

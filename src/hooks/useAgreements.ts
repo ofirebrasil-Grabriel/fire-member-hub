@@ -1,13 +1,54 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { Database } from '@/integrations/supabase/types';
+// Define Agreement types locally since the table might not be in generated types yet
+export interface Agreement {
+  id: string;
+  user_id: string;
+  debt_id: string | null;
+  negotiation_plan_id: string | null;
+  creditor_name: string;
+  original_value: number | null;
+  total_amount: number;
+  entry_amount: number | null;
+  monthly_payment: number;
+  interest_rate: number | null;
+  installments: number;
+  start_date: string;
+  end_date: string | null;
+  next_payment_date: string | null;
+  contract_path: string | null;
+  boleto_path: string | null;
+  status: string | null;
+  paid_installments: number | null;
+  savings: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
-export type Agreement = Database['public']['Tables']['agreements']['Row'];
-export type AgreementInsert = Database['public']['Tables']['agreements']['Insert'];
-export type AgreementUpdate = Database['public']['Tables']['agreements']['Update'];
+export interface AgreementInsert {
+  user_id: string;
+  debt_id?: string | null;
+  negotiation_plan_id?: string | null;
+  creditor_name: string;
+  original_value?: number | null;
+  total_amount: number;
+  entry_amount?: number | null;
+  monthly_payment: number;
+  interest_rate?: number | null;
+  installments: number;
+  start_date: string;
+  end_date?: string | null;
+  next_payment_date?: string | null;
+  contract_path?: string | null;
+  boleto_path?: string | null;
+  status?: string | null;
+  paid_installments?: number | null;
+  savings?: number | null;
+}
 
-export type AgreementInput = AgreementInsert;
+export type AgreementUpdate = Partial<AgreementInsert>;
+export type AgreementInput = Omit<AgreementInsert, 'user_id'>;
 
 export const useAgreements = () => {
     const { user } = useAuth();
@@ -55,7 +96,7 @@ export const useAgreements = () => {
             .insert({
                 user_id: user.id,
                 ...input,
-            } as AgreementInsert)
+            })
             .select()
             .single();
 
@@ -83,7 +124,7 @@ export const useAgreements = () => {
             .update({
                 ...input,
                 updated_at: new Date().toISOString(),
-            } as AgreementUpdate)
+            })
             .eq('id', id)
             .eq('user_id', user.id)
             .select()
@@ -112,13 +153,14 @@ export const useAgreements = () => {
             return false;
         }
 
-        const newPaidInstallments = agreement.paid_installments + 1;
-        const isCompleted = newPaidInstallments >= agreement.installments;
+        const typedAgreement = agreement as Agreement;
+        const newPaidInstallments = (typedAgreement.paid_installments || 0) + 1;
+        const isCompleted = newPaidInstallments >= typedAgreement.installments;
 
         // Calcular próxima data de pagamento
-        let nextPaymentDate = null;
-        if (!isCompleted && agreement.next_payment_date) {
-            const next = new Date(agreement.next_payment_date);
+        let nextPaymentDate: string | null = null;
+        if (!isCompleted && typedAgreement.next_payment_date) {
+            const next = new Date(typedAgreement.next_payment_date);
             next.setMonth(next.getMonth() + 1);
             nextPaymentDate = next.toISOString().split('T')[0];
         }
@@ -130,7 +172,7 @@ export const useAgreements = () => {
                 status: isCompleted ? 'completed' : 'active',
                 next_payment_date: nextPaymentDate,
                 updated_at: new Date().toISOString(),
-            } as AgreementUpdate)
+            })
             .eq('id', id)
             .eq('user_id', user.id);
 
@@ -140,11 +182,11 @@ export const useAgreements = () => {
         }
 
         // Se completou e tem debt_id, marcar dívida como paga
-        if (isCompleted && agreement.debt_id) {
+        if (isCompleted && typedAgreement.debt_id) {
             await supabase
                 .from('debts')
                 .update({ status: 'paid' })
-                .eq('id', agreement.debt_id);
+                .eq('id', typedAgreement.debt_id);
         }
 
         return true;

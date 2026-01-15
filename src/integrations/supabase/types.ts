@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreements: {
+        Row: {
+          boleto_path: string | null
+          contract_path: string | null
+          created_at: string | null
+          creditor_name: string
+          debt_id: string | null
+          end_date: string | null
+          entry_amount: number | null
+          id: string
+          installments: number
+          interest_rate: number | null
+          monthly_payment: number
+          negotiation_plan_id: string | null
+          next_payment_date: string | null
+          original_value: number | null
+          paid_installments: number | null
+          savings: number | null
+          start_date: string
+          status: string | null
+          total_amount: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          boleto_path?: string | null
+          contract_path?: string | null
+          created_at?: string | null
+          creditor_name: string
+          debt_id?: string | null
+          end_date?: string | null
+          entry_amount?: number | null
+          id?: string
+          installments: number
+          interest_rate?: number | null
+          monthly_payment: number
+          negotiation_plan_id?: string | null
+          next_payment_date?: string | null
+          original_value?: number | null
+          paid_installments?: number | null
+          savings?: number | null
+          start_date: string
+          status?: string | null
+          total_amount: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          boleto_path?: string | null
+          contract_path?: string | null
+          created_at?: string | null
+          creditor_name?: string
+          debt_id?: string | null
+          end_date?: string | null
+          entry_amount?: number | null
+          id?: string
+          installments?: number
+          interest_rate?: number | null
+          monthly_payment?: number
+          negotiation_plan_id?: string | null
+          next_payment_date?: string | null
+          original_value?: number | null
+          paid_installments?: number | null
+          savings?: number | null
+          start_date?: string
+          status?: string | null
+          total_amount?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreements_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_negotiation_plan_id_fkey"
+            columns: ["negotiation_plan_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_items: {
         Row: {
           created_at: string | null
@@ -129,9 +216,11 @@ export type Database = {
           created_at: string | null
           day_id: number
           diary_entry: string | null
+          form_data: Json | null
           id: string
           mood: string | null
-          payload: Json | null
+          reward_claimed: boolean | null
+          reward_timestamp: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -142,9 +231,11 @@ export type Database = {
           created_at?: string | null
           day_id: number
           diary_entry?: string | null
+          form_data?: Json | null
           id?: string
           mood?: string | null
-          payload?: Json | null
+          reward_claimed?: boolean | null
+          reward_timestamp?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -155,9 +246,11 @@ export type Database = {
           created_at?: string | null
           day_id?: number
           diary_entry?: string | null
+          form_data?: Json | null
           id?: string
           mood?: string | null
-          payload?: Json | null
+          reward_claimed?: boolean | null
+          reward_timestamp?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -186,9 +279,12 @@ export type Database = {
           id: number
           morning_audio_url: string | null
           morning_message: string | null
+          motivation_phrase: string | null
           next_day_preview: string | null
           reflection_prompt: string | null
           reflection_questions: string[] | null
+          reward_icon: string | null
+          reward_label: string | null
           subtitle: string
           task_steps: Json | null
           task_title: string | null
@@ -210,9 +306,12 @@ export type Database = {
           id?: number
           morning_audio_url?: string | null
           morning_message?: string | null
+          motivation_phrase?: string | null
           next_day_preview?: string | null
           reflection_prompt?: string | null
           reflection_questions?: string[] | null
+          reward_icon?: string | null
+          reward_label?: string | null
           subtitle: string
           task_steps?: Json | null
           task_title?: string | null
@@ -234,9 +333,12 @@ export type Database = {
           id?: number
           morning_audio_url?: string | null
           morning_message?: string | null
+          motivation_phrase?: string | null
           next_day_preview?: string | null
           reflection_prompt?: string | null
           reflection_questions?: string[] | null
+          reward_icon?: string | null
+          reward_label?: string | null
           subtitle?: string
           task_steps?: Json | null
           task_title?: string | null
@@ -291,6 +393,198 @@ export type Database = {
         }
         Relationships: []
       }
+      decision_rules: {
+        Row: {
+          created_at: string | null
+          default_action: string | null
+          id: string
+          level_1: Json | null
+          level_2: Json | null
+          level_3: Json | null
+          primary_trigger: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          default_action?: string | null
+          id?: string
+          level_1?: Json | null
+          level_2?: Json | null
+          level_3?: Json | null
+          primary_trigger?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          default_action?: string | null
+          id?: string
+          level_1?: Json | null
+          level_2?: Json | null
+          level_3?: Json | null
+          primary_trigger?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      emergency_fund: {
+        Row: {
+          account_info: string | null
+          account_type: string | null
+          auto_transfer: boolean | null
+          created_at: string | null
+          current_balance: number | null
+          goal_amount: number | null
+          id: string
+          monthly_contribution: number | null
+          transfer_day: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_info?: string | null
+          account_type?: string | null
+          auto_transfer?: boolean | null
+          created_at?: string | null
+          current_balance?: number | null
+          goal_amount?: number | null
+          id?: string
+          monthly_contribution?: number | null
+          transfer_day?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_info?: string | null
+          account_type?: string | null
+          auto_transfer?: boolean | null
+          created_at?: string | null
+          current_balance?: number | null
+          goal_amount?: number | null
+          id?: string
+          monthly_contribution?: number | null
+          transfer_day?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fixed_expenses: {
+        Row: {
+          amount: number
+          auto_debit: boolean | null
+          category: string | null
+          created_at: string | null
+          due_date: number | null
+          id: string
+          name: string
+          notes: string | null
+          payment_method: string | null
+          priority: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          auto_debit?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          due_date?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          payment_method?: string | null
+          priority?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          auto_debit?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          due_date?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          payment_method?: string | null
+          priority?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      income_items: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          received_on: number | null
+          recurrence: string | null
+          source: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          received_on?: number | null
+          recurrence?: string | null
+          source: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          received_on?: number | null
+          recurrence?: string | null
+          source?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      library_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          group_label: string | null
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          group_label?: string | null
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          group_label?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_budget: {
         Row: {
           created_at: string | null
@@ -329,6 +623,133 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      negotiation_plans: {
+        Row: {
+          contact_email: string | null
+          contact_hours: string | null
+          contact_phone: string | null
+          created_at: string | null
+          debt_id: string | null
+          documents_needed: string | null
+          id: string
+          ideal_monthly_payment: number | null
+          key_arguments: string | null
+          max_monthly_payment: number | null
+          objective: string | null
+          priority: string | null
+          scheduled_at: string | null
+          scripts: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_hours?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          debt_id?: string | null
+          documents_needed?: string | null
+          id?: string
+          ideal_monthly_payment?: number | null
+          key_arguments?: string | null
+          max_monthly_payment?: number | null
+          objective?: string | null
+          priority?: string | null
+          scheduled_at?: string | null
+          scripts?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_hours?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          debt_id?: string | null
+          documents_needed?: string | null
+          id?: string
+          ideal_monthly_payment?: number | null
+          key_arguments?: string | null
+          max_monthly_payment?: number | null
+          objective?: string | null
+          priority?: string | null
+          scheduled_at?: string | null
+          scripts?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_plans_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiation_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          negotiation_plan_id: string
+          next_steps: string | null
+          notes: string | null
+          proposed_entry_value: number | null
+          proposed_installments: number | null
+          proposed_interest: number | null
+          proposed_monthly_value: number | null
+          proposed_total_value: number | null
+          scheduled_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          negotiation_plan_id: string
+          next_steps?: string | null
+          notes?: string | null
+          proposed_entry_value?: number | null
+          proposed_installments?: number | null
+          proposed_interest?: number | null
+          proposed_monthly_value?: number | null
+          proposed_total_value?: number | null
+          scheduled_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          negotiation_plan_id?: string
+          next_steps?: string | null
+          notes?: string | null
+          proposed_entry_value?: number | null
+          proposed_installments?: number | null
+          proposed_interest?: number | null
+          proposed_monthly_value?: number | null
+          proposed_total_value?: number | null
+          scheduled_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_sessions_negotiation_plan_id_fkey"
+            columns: ["negotiation_plan_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       negotiations: {
         Row: {
@@ -416,6 +837,222 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_checkpoints: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          plan_id: string
+          target_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          plan_id: string
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          plan_id?: string
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_checkpoints_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_debt_priorities: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          debt_id: string | null
+          id: string
+          notes: string | null
+          plan_id: string
+          priority: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          debt_id?: string | null
+          id?: string
+          notes?: string | null
+          plan_id: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          debt_id?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_debt_priorities_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_debt_priorities_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_essentials: {
+        Row: {
+          created_at: string | null
+          due_date: number | null
+          id: string
+          minimum_amount: number
+          name: string
+          plan_id: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          due_date?: number | null
+          id?: string
+          minimum_amount: number
+          name: string
+          plan_id: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          due_date?: number | null
+          id?: string
+          minimum_amount?: number
+          name?: string
+          plan_id?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_essentials_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_levers: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          goal_text: string
+          id: string
+          plan_id: string
+          success_criteria: string | null
+          type: string
+          updated_at: string | null
+          weekly_action: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          goal_text: string
+          id?: string
+          plan_id: string
+          success_criteria?: string | null
+          type: string
+          updated_at?: string | null
+          weekly_action?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          goal_text?: string
+          id?: string
+          plan_id?: string
+          success_criteria?: string | null
+          type?: string
+          updated_at?: string | null
+          weekly_action?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_levers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          commitment_phrase: string | null
+          created_at: string | null
+          cycle_type: string
+          end_date: string | null
+          id: string
+          mode: string | null
+          start_date: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          commitment_phrase?: string | null
+          created_at?: string | null
+          cycle_type: string
+          end_date?: string | null
+          id?: string
+          mode?: string | null
+          start_date: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          commitment_phrase?: string | null
+          created_at?: string | null
+          cycle_type?: string
+          end_date?: string | null
+          id?: string
+          mode?: string | null
+          start_date?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -446,6 +1083,39 @@ export type Database = {
         }
         Relationships: []
       }
+      progress_dashboard: {
+        Row: {
+          certificate_generated_at: string | null
+          certificate_url: string | null
+          commitment_phrase: string | null
+          created_at: string | null
+          id: string
+          indicators: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          certificate_generated_at?: string | null
+          certificate_url?: string | null
+          commitment_phrase?: string | null
+          created_at?: string | null
+          id?: string
+          indicators?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          certificate_generated_at?: string | null
+          certificate_url?: string | null
+          commitment_phrase?: string | null
+          created_at?: string | null
+          id?: string
+          indicators?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           description: string | null
@@ -470,6 +1140,48 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      shadow_expenses: {
+        Row: {
+          action_taken_at: string | null
+          comment: string | null
+          created_at: string | null
+          estimated_amount: number | null
+          frequency: string | null
+          id: string
+          monthly_limit: number | null
+          name: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_taken_at?: string | null
+          comment?: string | null
+          created_at?: string | null
+          estimated_amount?: number | null
+          frequency?: string | null
+          id?: string
+          monthly_limit?: number | null
+          name: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_taken_at?: string | null
+          comment?: string | null
+          created_at?: string | null
+          estimated_amount?: number | null
+          frequency?: string | null
+          id?: string
+          monthly_limit?: number | null
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -516,6 +1228,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string | null
+          date: string
+          description: string
+          id: string
+          is_shadow: boolean | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string | null
+          date: string
+          description: string
+          id?: string
+          is_shadow?: boolean | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          is_shadow?: boolean | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_profile: {
         Row: {
@@ -573,6 +1327,45 @@ export type Database = {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      variable_expenses: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string | null
+          id: string
+          is_essential: boolean | null
+          name: string
+          notes: string | null
+          spent_on: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_essential?: boolean | null
+          name: string
+          notes?: string | null
+          spent_on: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_essential?: boolean | null
+          name?: string
+          notes?: string | null
+          spent_on?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []

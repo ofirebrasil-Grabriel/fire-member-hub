@@ -41,8 +41,8 @@ export interface DayContent {
   concept_title: string | null;
   concept_audio_url: string | null;
   task_title: string | null;
-  task_steps: unknown[];
-  tools: unknown[];
+  task_steps: Json;
+  tools: string[];
   reflection_questions: string[];
   commitment: string | null;
   next_day_preview: string | null;
@@ -122,7 +122,7 @@ export const useAdmin = () => {
           email: profile.email,
           full_name: profile.full_name,
           avatar_url: profile.avatar_url,
-          created_at: profile.created_at,
+          created_at: profile.created_at ?? new Date().toISOString(),
           subscription_status: userSub?.status || null,
           current_day: progress?.day_id || 0,
         };
@@ -146,7 +146,7 @@ export const useAdmin = () => {
 
     setDays((data || []).map((day) => ({
       ...day,
-      task_steps: Array.isArray(day.task_steps) ? day.task_steps : [],
+      task_steps: day.task_steps ?? [],
       tools: Array.isArray(day.tools) ? day.tools : [],
       reflection_questions: Array.isArray(day.reflection_questions) ? day.reflection_questions : [],
     })));
@@ -154,9 +154,26 @@ export const useAdmin = () => {
 
   // Create new day
   const createDay = async (dayData: Partial<DayContent>) => {
+    const insertData = {
+      title: dayData.title ?? '',
+      subtitle: dayData.subtitle ?? '',
+      emoji: dayData.emoji,
+      morning_message: dayData.morning_message,
+      morning_audio_url: dayData.morning_audio_url,
+      concept: dayData.concept,
+      concept_title: dayData.concept_title,
+      concept_audio_url: dayData.concept_audio_url,
+      task_title: dayData.task_title,
+      task_steps: dayData.task_steps as Json,
+      tools: dayData.tools,
+      reflection_questions: dayData.reflection_questions,
+      commitment: dayData.commitment,
+      next_day_preview: dayData.next_day_preview,
+    };
+
     const { error } = await supabase
       .from('days')
-      .insert(dayData);
+      .insert(insertData);
 
     if (error) {
       console.error('Error creating day:', error);
@@ -169,9 +186,26 @@ export const useAdmin = () => {
 
   // Update day
   const updateDay = async (dayId: number, dayData: Partial<DayContent>) => {
+    const updateData = {
+      title: dayData.title,
+      subtitle: dayData.subtitle,
+      emoji: dayData.emoji,
+      morning_message: dayData.morning_message,
+      morning_audio_url: dayData.morning_audio_url,
+      concept: dayData.concept,
+      concept_title: dayData.concept_title,
+      concept_audio_url: dayData.concept_audio_url,
+      task_title: dayData.task_title,
+      task_steps: dayData.task_steps as Json,
+      tools: dayData.tools,
+      reflection_questions: dayData.reflection_questions,
+      commitment: dayData.commitment,
+      next_day_preview: dayData.next_day_preview,
+    };
+
     const { error } = await supabase
       .from('days')
-      .update(dayData)
+      .update(updateData)
       .eq('id', dayId);
 
     if (error) {

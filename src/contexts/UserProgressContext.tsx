@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Tables } from '@/integrations/supabase/types';
+import type { Json } from '@/integrations/supabase/types';
 
 interface DayProgress {
   completed: boolean;
@@ -72,8 +72,8 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       if (!isActive) return;
 
-      const profile = profileResult.data as Tables<'profiles'> | null;
-      const rows = (progressResult.data || []) as Tables<'day_progress'>[];
+      const profile = profileResult.data;
+      const rows = progressResult.data || [];
 
       const daysProgress = rows.reduce<Record<number, DayProgress>>((acc, row) => {
         acc[row.day_id] = {
@@ -119,7 +119,9 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
         mood: dayProgress.mood ?? null,
         diary_entry: dayProgress.diaryEntry ?? null,
         completed_at: dayProgress.completedAt ?? null,
-        form_data: (dayProgress.form_data ?? {}) as any,
+        form_data: (dayProgress.form_data ?? {}) as Json,
+        reward_claimed: dayProgress.rewardClaimed ?? false,
+        reward_timestamp: dayProgress.rewardTimestamp ?? null,
       },
       { onConflict: 'user_id,day_id' }
     );
@@ -252,7 +254,9 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
         mood: null,
         diary_entry: null,
         completed_at: null,
-        form_data: {},
+        form_data: {} as Json,
+        reward_claimed: false,
+        reward_timestamp: null,
       })
       .eq('user_id', user.id)
       .then(({ error }) => {
