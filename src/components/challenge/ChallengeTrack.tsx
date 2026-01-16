@@ -89,7 +89,7 @@ const TrackPathCard = ({
       onClick={() => !isLocked && onSelect(item.id)}
       disabled={isLocked}
       className={cn(
-        'group relative rounded-[30px] border border-border/60 bg-gradient-glass px-6 py-6 text-left shadow-glass transition-all duration-300 lg:px-10',
+        'group relative rounded-2xl border border-border/60 bg-gradient-glass px-4 py-4 text-left shadow-glass transition-all duration-300 lg:px-6 lg:py-5',
         iconPosition === 'top' && 'pt-14',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         !isLocked && 'hover:-translate-y-0.5 hover:border-primary/30',
@@ -187,24 +187,24 @@ const TrackPathCard = ({
 };
 
 export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
-  const startY = 120;
-  const stepY = 160;
-  const bubbleSize = 72;
+  const startY = 100;
+  const stepY = 140;
+  const bubbleSize = 82;
   const bubbleOffset = bubbleSize / 2;
-  const trackHeight = startY + (items.length - 1) * stepY + 240;
+  const trackHeight = startY + (items.length - 1) * stepY + bubbleSize + 140;
   const roadPath =
-    'M 50 0 C 50 30, 53 30, 53 60 C 53 120, 47 120, 47 180 C 47 240, 53 240, 53 300 C 53 360, 47 360, 47 420 C 47 480, 53 480, 53 540 C 53 600, 47 600, 47 660 C 47 720, 53 720, 53 780 C 53 840, 47 840, 47 900 C 47 960, 53 960, 53 1020 C 53 1080, 47 1080, 47 1140 C 47 1200, 53 1200, 53 1260 C 53 1320, 47 1320, 47 1380 C 47 1440, 53 1440, 53 1500 C 53 1560, 47 1560, 47 1620 C 47 1680, 53 1680, 47 1740 L 50 1800';
+    'M 50 -100 C 50 30, 53 30, 53 60 C 53 120, 47 120, 47 180 C 47 240, 53 240, 53 300 C 53 360, 47 360, 47 420 C 47 480, 53 480, 53 540 C 53 600, 47 600, 47 660 C 47 720, 53 720, 53 780 C 53 840, 47 840, 47 900 C 47 960, 53 960, 53 1020 C 53 1080, 47 1080, 47 1140 C 47 1200, 53 1200, 53 1260 C 53 1320, 47 1320, 47 1380 C 47 1440, 53 1440, 53 1500 C 53 1560, 47 1560, 47 1620 C 47 1680, 53 1680, 53 1740 C 53 1860, 47 1860, 47 1920 C 47 2040, 53 2040, 53 2100 L 53 2160';
 
   return (
     <>
-      <div className="space-y-8 lg:hidden">
+      <div className="space-y-2 lg:hidden ">
         {items.map((item) => (
           <TrackPathCard
             key={item.id}
             item={item}
             onSelect={onSelect}
             iconPosition="top"
-            className="mx-auto w-full max-w-[400px]"
+            className="mx-auto w-full max-w-[calc(100vw-80px)]"
           />
         ))}
       </div>
@@ -213,7 +213,7 @@ export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
         <div className="relative mx-auto max-w-[1400px]">
           <div className="relative" style={{ height: trackHeight }}>
             <svg
-              viewBox="0 0 100 1800"
+              viewBox="0 -100 100 1940"
               preserveAspectRatio="none"
               className="pointer-events-none absolute inset-0 h-full w-full"
             >
@@ -229,7 +229,7 @@ export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
                 d={roadPath}
                 fill="none"
                 stroke="url(#road-gradient)"
-                strokeWidth="2"
+                strokeWidth="1.5"
                 strokeLinecap="round"
                 pathLength="1"
                 initial={{ pathLength: 0, opacity: 0 }}
@@ -266,7 +266,7 @@ export const ChallengeTrack = ({ items, onSelect }: ChallengeTrackProps) => {
                       item={item}
                       onSelect={onSelect}
                       iconSide={isLeft ? 'right' : 'left'}
-                      className="w-[640px] max-w-[calc(100vw-4rem)]"
+                      className="w-[calc(40vw-80px)]"
                     />
                   </motion.div>
                 );

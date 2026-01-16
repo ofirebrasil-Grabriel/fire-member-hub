@@ -24,31 +24,66 @@ export function generateDayAnalysis(dayId: number, formData: Record<string, unkn
 }
 
 function generateDay1Analysis(formData: Record<string, unknown>): string {
-    const anxietyScore = Number(formData.anxiety_score) || 0;
-    const clarityScore = Number(formData.clarity_score) || 0;
-    const sources = (formData.sources as string[]) || [];
+    const feeling = formData.feeling_about_money as string;
+    const emotions = (formData.current_emotions as string[]) || [];
+    const blocks = (formData.biggest_blocks as string[]) || [];
+    const goals = (formData.goals_15_days as string[]) || [];
+    const issues = (formData.current_issues as string[]) || [];
 
-    let analysis = 'Seu perfil financeiro inicial foi criado. ';
+    let analysis = '';
 
-    if (anxietyScore >= 7) {
-        analysis += 'Você apresenta um nível alto de ansiedade financeira, o que é comum. ';
-    } else if (anxietyScore >= 4) {
-        analysis += 'Sua ansiedade financeira está em um nível moderado. ';
-    } else {
-        analysis += 'Você demonstra boa tranquilidade em relação às finanças. ';
+    // Análise do sentimento com dinheiro
+    if (feeling === 'run') {
+        analysis += 'Você demonstra um padrão de evitação em relação ao dinheiro. Isso é comum quando tivemos experiências negativas com finanças. ';
+        analysis += 'O primeiro passo é entender que esse medo é uma proteção criada pelo seu cérebro, mas que agora precisa ser reprogramada. ';
+    } else if (feeling === 'heavy') {
+        analysis += 'O peso que você sente ao pensar em dinheiro indica que suas finanças ocupam um espaço emocional significativo. ';
+        analysis += 'Vamos trabalhar para transformar essa carga em leveza através de organização e clareza. ';
+    } else if (feeling === 'light') {
+        analysis += 'Ótimo! Você já tem uma relação mais leve com o dinheiro. ';
+        analysis += 'Isso é uma excelente base para construir hábitos financeiros saudáveis. ';
     }
 
-    if (clarityScore <= 3) {
-        analysis += 'A clareza sobre suas finanças precisa melhorar, e esse desafio vai te ajudar. ';
-    } else if (clarityScore <= 6) {
-        analysis += 'Você tem uma visão parcial das suas finanças. ';
-    } else {
-        analysis += 'Você já possui boa clareza financeira. ';
+    // Análise das emoções
+    if (emotions.includes('fear') || emotions.includes('anxiety')) {
+        analysis += 'A ansiedade e o medo financeiro geralmente vêm de incertezas sobre o futuro. ';
+        analysis += 'Nos próximos dias, vamos criar previsibilidade para acalmar esse sistema de alerta interno. ';
     }
 
-    if (sources.length > 3) {
-        analysis += `Com ${sources.length} fontes de dívidas identificadas, é importante priorizar bem.`;
+    if (emotions.includes('shame') || emotions.includes('guilt')) {
+        analysis += 'Vergonha e culpa são emoções que nos paralisam. Lembre-se: sua situação financeira não define quem você é. ';
     }
+
+    // Análise dos bloqueios
+    if (blocks.includes('see_numbers')) {
+        analysis += 'Evitar ver os números é uma forma de proteção, mas impede o progresso. ';
+        analysis += 'Vamos começar devagar, com pequenas olhadas que vão ficando mais confortáveis. ';
+    }
+
+    if (blocks.includes('home_conflict')) {
+        analysis += 'Conflitos em casa sobre dinheiro são muito comuns. Uma conversa estruturada pode ajudar a alinhar expectativas. ';
+    }
+
+    // Situação atual
+    if (issues.length > 3) {
+        analysis += 'Com múltiplos desafios financeiros simultâneos, é importante priorizar e atacar um de cada vez. ';
+    }
+
+    // Objetivos
+    if (goals.includes('breathe')) {
+        analysis += 'Seu objetivo de "respirar" mostra que você precisa primeiro de alívio emocional antes de pensar em estratégias. Vamos respeitar esse ritmo. ';
+    }
+
+    if (goals.includes('plan_30_90')) {
+        analysis += 'Ótimo que você quer um plano estruturado! Os próximos 15 dias vão te preparar exatamente para isso. ';
+    }
+
+    // Guia de reprogramação
+    analysis += '\n\n📘 GUIA DE REPROGRAMAÇÃO: ';
+    analysis += 'Suas crenças sobre dinheiro foram formadas na infância, observando adultos ao redor. ';
+    analysis += 'Para reprogramá-las, comece observando seus pensamentos automáticos sobre dinheiro sem julgamento. ';
+    analysis += 'Depois, questione: "Essa crença é minha ou herdei de alguém?" ';
+    analysis += 'Finalmente, escolha uma nova crença que sirva melhor aos seus objetivos atuais.';
 
     return analysis;
 }

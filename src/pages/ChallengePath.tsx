@@ -98,12 +98,11 @@ const ChallengePath = () => {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-7xl px-0 md:px-6 space-y-8">
+      <div className="max-h-96 mx-auto max-w-[calc(80vw-0px)] px-0 md:px-2 space-y-8">
         <div className="relative w-full overflow-hidden rounded-3xl border border-border/60 bg-surface/60 px-6 py-7 md:px-8">
           <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gradient-glass opacity-30 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-10 h-72 w-72 rounded-full bg-surface/70 blur-3xl" />
-
-          <div className="relative grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="relative items-end grid gap-6 xl:grid-cols-[1.3fr_0.7fr] lg:max-w-[calc(80vw-0px)]">
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2.5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface/70 border border-border/60">
@@ -162,7 +161,7 @@ const ChallengePath = () => {
               </div>
             </div>
 
-            <div className="glass-card flex h-full flex-col gap-6 p-4 md:p-7">
+            <div className="glass-card flex min-w-72 max-h-96 h-auto flex-col gap-6 p-4 md:p-7">
               <div className="text-center">
                 <p className="text-[22px] font-bold tracking-tight">Seu progresso</p>
                 <p className="text-[14px] text-muted-foreground  tracking-wider font-medium">Acompanhe a evolução</p>
@@ -228,7 +227,7 @@ const ChallengePath = () => {
           </p>
         </div>
 
-        <div className="justify-center items-center space-y-5">
+        <div className="justify-center items-center space-y-5 md:px-2">
           <ChallengeTrack
             items={DAY_ENGINE.map((day) => {
               const dayContent = dayContentMap.get(day.id);

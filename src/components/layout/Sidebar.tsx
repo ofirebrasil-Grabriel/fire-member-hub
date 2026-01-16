@@ -8,9 +8,9 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import { useUserProgress } from '@/contexts/UserProgressContext';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 const menuItems = [
   { icon: Flame, label: 'Desafio', path: '/', adminOnly: false },
@@ -20,7 +20,7 @@ const menuItems = [
 ];
 
 export const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggle } = useSidebar();
   const location = useLocation();
   const { progress, getProgressPercentage } = useUserProgress();
   const { isAdmin } = useAdmin();
@@ -119,7 +119,7 @@ export const Sidebar = () => {
 
       {/* Collapse Button */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={toggle}
         className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-surface border border-border rounded-full flex items-center justify-center hover:bg-surface-hover transition-colors"
       >
         {collapsed ? (

@@ -1,5 +1,5 @@
 import { DayConfig } from '@/config/dayEngine';
-import Day1Form from '@/components/day/Day1Form';
+import Day1Wizard from '@/components/day/Day1Wizard';
 import Day2Stepper from '@/components/day/Day2Stepper';
 import Day3TransactionTable from '@/components/day/Day3TransactionTable';
 import { DayInputForm } from '@/components/challenge/DayInputForm';
@@ -34,7 +34,7 @@ export default function DayTaskTab({
         return (
             <div className="animate-in fade-in duration-300">
                 {dayId === 1 && (
-                    <Day1Form
+                    <Day1Wizard
                         onComplete={onComplete}
                         defaultValues={defaultValues}
                     />

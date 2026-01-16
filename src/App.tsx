@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UserProgressProvider } from "@/contexts/UserProgressContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 import DayPage from "./pages/DayPage";
 import ChallengePath from "./pages/ChallengePath";
 import Library from "./pages/Library";
@@ -93,15 +94,17 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <UserProgressProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </TooltipProvider>
-        </UserProgressProvider>
+        <SidebarProvider>
+          <UserProgressProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </TooltipProvider>
+          </UserProgressProvider>
+        </SidebarProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
