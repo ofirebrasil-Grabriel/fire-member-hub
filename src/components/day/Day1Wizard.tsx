@@ -448,9 +448,9 @@ const Day1Wizard: React.FC<Day1WizardProps> = ({ onComplete, defaultValues = {} 
     };
 
     return (
-        <div className="min-h-[500px] flex flex-col">
+        <div className="flex flex-col">
             {/* Progress bar */}
-            <div className="mb-6">
+            <div className="mb-2 h-min">
                 <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-muted-foreground">
                         Passo {currentStep + 1} de {WIZARD_STEPS.length}

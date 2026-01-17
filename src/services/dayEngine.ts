@@ -224,41 +224,56 @@ const calculateOutputMetrics = async (
   const values: Record<string, string | number> = {};
 
   if (dayId === 1) {
-    const { data } = await supabase
-      .from('user_profile')
-      .select('id, no_new_debt_commitment')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Day 1 usa dados do payload do wizard
+    const feelingMap: Record<string, string> = {
+      light: 'Leve ✨',
+      heavy: 'Pesado 😔',
+      run: 'Evitação 😰',
+    };
+    const feeling = payload.feeling_about_money as string;
+    values.feeling = feelingMap[feeling] || feeling || '-';
 
-    values.profileCreated = data?.id ? 'Sim' : 'Nao';
-    values.commitment = data?.no_new_debt_commitment ? 'Ativa' : 'Inativa';
+    const emotions = (payload.current_emotions as string[]) || [];
+    values.emotions_count = emotions.length;
+
+    const goals = (payload.goals_15_days as string[]) || [];
+    values.goals_count = goals.length;
+
+    const period = payload.schedule_period as string;
+    const time = payload.schedule_time as string;
+    const periodMap: Record<string, string> = {
+      morning: 'Manhã',
+      afternoon: 'Tarde',
+      night: 'Noite',
+    };
+    values.schedule = `${periodMap[period] || period || ''} ${time || ''}`.trim() || '-';
   }
 
   if (dayId === 2) {
-    const { data } = await supabase
-      .from('debts')
-      .select('total_balance, is_critical')
-      .eq('user_id', userId);
-
-    const debts = data || [];
-    values.totalDebts = debts.length;
-    values.criticalCount = debts.filter((debt) => debt.is_critical).length;
-    values.totalValue = sumValues(debts.map((debt) => toNumber(debt.total_balance)));
+    // Day 2 usa dados do payload do componente
+    values.totalIncome = toNumber(payload.totalIncome);
+    values.totalExpenses = toNumber(payload.totalExpenses);
+    values.totalDebtsMin = toNumber(payload.totalDebtsMin);
+    values.balance = toNumber(payload.balance);
   }
 
   if (dayId === 3) {
-    const { data } = await supabase
-      .from('calendar_items')
-      .select('value, is_fixed')
-      .eq('user_id', userId);
-
-    const items = data || [];
-    values.totalItems = items.length;
-    values.fixedCount = items.filter((item) => item.is_fixed).length;
-    values.totalValue = sumValues(items.map((item) => toNumber(item.value)));
+    // Day 3 usa dados do payload do componente
+    values.triggersAnalyzed = toNumber(payload.triggersAnalyzed);
+    values.avoidableCount = toNumber(payload.avoidableCount);
+    values.largePurchasesCount = toNumber(payload.largePurchasesCount);
+    values.mainTrigger = String(payload.mainTrigger || '');
+    values.mainInfluence = String(payload.mainInfluence || '');
   }
 
-  if (dayId === 4 || dayId === 7) {
+  if (dayId === 4) {
+    // Day 4 usa dados do payload do componente
+    values.bannedCount = toNumber(payload.bannedCount);
+    values.exceptionsCount = toNumber(payload.exceptionsCount);
+    values.totalExceptionsLimit = toNumber(payload.totalExceptionsLimit);
+  }
+
+  if (dayId === 7) {
     const monthYear = (payload.month_year as string) || getMonthYear();
     const { data } = await supabase
       .from('monthly_budget')
@@ -274,31 +289,29 @@ const calculateOutputMetrics = async (
   }
 
   if (dayId === 5) {
-    const { data } = await supabase
-      .from('card_policy')
-      .select('weekly_limit')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    values.weeklyLimit = data?.weekly_limit ?? 0;
-    values.policyActive = data ? 'Ativa' : 'Inativa';
+    // Day 5 usa dados do payload do componente
+    values.mainCardName = String(payload.mainCardName || '');
+    values.blockedCount = toNumber(payload.blockedCount);
+    values.weeklyLimit = toNumber(payload.weeklyLimit);
+    values.exceptionsCount = toNumber(payload.exceptionsCount);
+    values.totalExceptionsLimit = toNumber(payload.totalExceptionsLimit);
   }
 
   if (dayId === 6) {
-    const { data } = await supabase
-      .from('cuts')
-      .select('estimated_value')
-      .eq('user_id', userId);
-
-    const cuts = data || [];
-    values.cutsCount = cuts.length;
-    values.estimatedSavings = sumValues(cuts.map((cut) => toNumber(cut.estimated_value)));
+    // Day 6 usa dados do payload do componente
+    values.cutsCount = toNumber(payload.cutsCount);
+    values.totalLimit = toNumber(payload.totalLimit);
+    values.bigGoal = String(payload.bigGoal || '');
   }
 
   if (dayId === 8) {
-    const current = toNumber(payload.current_value);
-    const target = toNumber(payload.target_value);
-    values.plannedSavings = Math.max(current - target, 0);
+    // Day 8 usa dados do payload do componente
+    values.totalBills = toNumber(payload.totalBills);
+    values.gap = toNumber(payload.gap);
+    values.payNowTotal = toNumber(payload.payNowTotal);
+    values.negotiateTotal = toNumber(payload.negotiateTotal);
+    values.pauseTotal = toNumber(payload.pauseTotal);
+    values.selectedPlan = String(payload.selectedPlan || '');
   }
 
   if (dayId === 9) {

@@ -126,6 +126,20 @@ export function useAchievements() {
         if (!user?.id) return false;
 
         try {
+            // Check if achievement already exists
+            const { data: existing } = await (supabase as any)
+                .from('achievements')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('day_id', dayId)
+                .maybeSingle();
+
+            if (existing) {
+                // Already claimed - just refresh and return success
+                await fetchAchievements();
+                return true;
+            }
+
             // Insert achievement (using any cast for new table)
             const { error: achievementError } = await (supabase as any)
                 .from('achievements')

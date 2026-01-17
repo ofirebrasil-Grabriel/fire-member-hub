@@ -54,6 +54,7 @@
     /* Gradients */
     --gradient-fire: linear-gradient(135deg, hsl(24 100% 50%), hsl(24 100% 40%));
     --gradient-surface: linear-gradient(180deg, hsl(210 24% 22%), hsl(210 24% 18%));
+    --gradient-clara: linear-gradient(180deg, hsl(212 36% 90%), hsl(208 11% 49%));
     --gradient-glass: linear-gradient(135deg, hsla(210 24% 30% / 0.5), hsla(210 24% 20% / 0.3));
 
     /* Shadows */

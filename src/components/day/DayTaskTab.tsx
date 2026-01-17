@@ -1,7 +1,11 @@
 import { DayConfig } from '@/config/dayEngine';
 import Day1Wizard from '@/components/day/Day1Wizard';
-import Day2Stepper from '@/components/day/Day2Stepper';
-import Day3TransactionTable from '@/components/day/Day3TransactionTable';
+import Day2FinancialMapper from '@/components/day/Day2FinancialMapper';
+import Day3TriggerAnalysis from '@/components/day/Day3TriggerAnalysis';
+import Day4SpendingRules from '@/components/day/Day4SpendingRules';
+import Day5CardPolicy from '@/components/day/Day5CardPolicy';
+import Day6QuickCuts from '@/components/day/Day6QuickCuts';
+import Day8PaymentQueue from '@/components/day/Day8PaymentQueue';
 import { DayInputForm } from '@/components/challenge/DayInputForm';
 import { CrudSection, CrudType } from '@/components/challenge/CrudSection';
 import { Loader2 } from 'lucide-react';
@@ -41,21 +45,49 @@ export default function DayTaskTab({
                 )}
 
                 {dayId === 2 && (
-                    <Day2Stepper
+                    <Day2FinancialMapper
                         onComplete={onComplete}
                         defaultValues={defaultValues}
                     />
                 )}
 
                 {dayId === 3 && (
-                    <Day3TransactionTable
+                    <Day3TriggerAnalysis
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 4 && (
+                    <Day4SpendingRules
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 5 && (
+                    <Day5CardPolicy
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 6 && (
+                    <Day6QuickCuts
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 8 && (
+                    <Day8PaymentQueue
                         onComplete={onComplete}
                         defaultValues={defaultValues}
                     />
                 )}
 
                 {/* Adicione mais dias customizados aqui conforme necessário */}
-                {![1, 2, 3].includes(dayId) && (
+                {![1, 2, 3, 4, 5, 6, 8].includes(dayId) && (
                     <div className="text-center py-8 text-muted-foreground">
                         Componente customizado para o Dia {dayId} ainda não implementado.
                     </div>
