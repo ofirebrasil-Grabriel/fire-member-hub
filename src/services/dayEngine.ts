@@ -213,7 +213,7 @@ const generateCalendarFromDebts = async (userId: string) => {
   if (error) throw error;
 };
 
-const calculateOutputMetrics = async (
+export const calculateOutputMetrics = async (
   dayId: number,
   userId: string,
   payload: Record<string, unknown>
@@ -227,26 +227,26 @@ const calculateOutputMetrics = async (
     // Day 1 usa dados do payload do wizard
     const feelingMap: Record<string, string> = {
       light: 'Leve ✨',
-      heavy: 'Pesado 😔',
-      run: 'Evitação 😰',
+      anxious: 'Ansioso(a)',
+      calm: 'Tranquilo(a)',
+      confused: 'Confuso(a)',
+      scared: 'Com medo',
+      indifferent: 'Indiferente',
     };
-    const feeling = payload.feeling_about_money as string;
-    values.feeling = feelingMap[feeling] || feeling || '-';
+    const feeling = payload.money_feeling as string;
+    values.money_feeling = feelingMap[feeling] || feeling || '-';
 
-    const emotions = (payload.current_emotions as string[]) || [];
-    values.emotions_count = emotions.length;
+    values.breathe_score = toNumber(payload.breathe_score);
+    values.monthly_income = toNumber(payload.monthly_income);
 
-    const goals = (payload.goals_15_days as string[]) || [];
-    values.goals_count = goals.length;
-
-    const period = payload.schedule_period as string;
-    const time = payload.schedule_time as string;
+    const period = payload.daily_time_period as string;
+    const time = payload.daily_time_exact as string;
     const periodMap: Record<string, string> = {
-      morning: 'Manhã',
+      morning: 'Manha',
       afternoon: 'Tarde',
       night: 'Noite',
     };
-    values.schedule = `${periodMap[period] || period || ''} ${time || ''}`.trim() || '-';
+    values.commitment_time = `${periodMap[period] || period || ''} ${time || ''}`.trim() || '-';
   }
 
   if (dayId === 2) {

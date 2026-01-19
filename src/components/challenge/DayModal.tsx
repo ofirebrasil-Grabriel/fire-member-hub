@@ -6,7 +6,7 @@ import { DayInputForm } from '@/components/challenge/DayInputForm';
 import { DayModalContent } from '@/components/challenge/DayModalContent';
 import { CrudSection, CrudType } from '@/components/challenge/CrudSection';
 import { OutputPanel } from '@/components/challenge/OutputPanel';
-import { completeDay, getDayConfig, OutputMetricValue } from '@/services/dayEngine';
+import { completeDay, getDayConfig, calculateOutputMetrics, OutputMetricValue } from '@/services/dayEngine';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProgress } from '@/contexts/UserProgressContext';
 import { toast } from '@/hooks/use-toast';
@@ -40,7 +40,8 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (!config) return;
+    if (!config || !open) return;
+
     // Se tiver customComponent, pula direto para a aba de execução
     // Se não, segue a lógica normal
     let nextPhase: ModalPhase;
@@ -54,10 +55,22 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
       nextPhase = 'output';
     }
     setPhase(nextPhase);
-    setPanel('conteudo');
+
+    const isCompleted = Boolean(progress.daysProgress[dayId]?.completed);
+    const storedFormData = progress.daysProgress[dayId]?.form_data;
+
+    if (isCompleted && storedFormData && user?.id) {
+      setPanel('concluido');
+      calculateOutputMetrics(dayId, user.id, storedFormData as Record<string, unknown>)
+        .then(setMetrics)
+        .catch(err => console.error("Erro ao carregar métricas:", err));
+    } else {
+      setPanel('conteudo');
+      setMetrics([]);
+    }
+
     setPayload({});
-    setMetrics([]);
-  }, [config, open]);
+  }, [config, open, dayId, user?.id, progress.daysProgress]);
 
   useEffect(() => {
     if (!open) return;

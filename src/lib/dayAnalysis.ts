@@ -73,66 +73,111 @@ export function generateDayAnalysis(dayId: number, formData: Record<string, unkn
 }
 
 function generateDay1Analysis(formData: Record<string, unknown>): string {
-    const feeling = formData.feeling_about_money as string;
-    const emotions = (formData.current_emotions as string[]) || [];
-    const blocks = (formData.biggest_blocks as string[]) || [];
-    const goals = (formData.goals_15_days as string[]) || [];
-    const issues = (formData.current_issues as string[]) || [];
+    // Mappings for labels
+    const feelingLabels: Record<string, string> = {
+        anxious: 'Ansioso(a)',
+        calm: 'Tranquilo(a)',
+        confused: 'Confuso(a)',
+        scared: 'Com medo',
+        indifferent: 'Indiferente',
+    };
+
+    const blockerLabels: Record<string, string> = {
+        low_income: 'Ganho pouco',
+        overspending: 'Gasto demais',
+        debts: 'Dividas',
+        no_control: 'Falta de controle',
+        dont_know: 'Nao sei por onde comecar',
+    };
+
+    const periodLabels: Record<string, string> = {
+        morning: 'Manha',
+        afternoon: 'Tarde',
+        night: 'Noite',
+    };
+
+    // Extract data
+    const feeling = formData.money_feeling as string;
+    const hasOverdueBills = formData.has_overdue_bills as string;
+    const monthlyIncome = Number(formData.monthly_income) || 0;
+    const topExpenses = (formData.top_expenses as string[]) || [];
+    const sharesFinances = formData.shares_finances as boolean;
+    const sharesWith = formData.shares_with as string;
+    const biggestBlocker = formData.biggest_blocker as string;
+    const mainGoal = formData.main_goal as string;
+    const triedBefore = formData.tried_before as boolean;
+    const whatBlocked = formData.what_blocked as string;
+    const breatheScore = Number(formData.breathe_score) || 5;
+    const breatheReason = formData.breathe_reason as string;
+    const dailyPeriod = formData.daily_time_period as string;
+    const dailyTime = formData.daily_time_exact as string;
+    const minimumStep = formData.minimum_step as string;
 
     let analysis = '';
 
-    // Análise do sentimento com dinheiro
-    if (feeling === 'run') {
-        analysis += 'Você demonstra um padrão de evitação em relação ao dinheiro. Isso é comum quando tivemos experiências negativas com finanças. ';
-        analysis += 'O primeiro passo é entender que esse medo é uma proteção criada pelo seu cérebro, mas que agora precisa ser reprogramada. ';
-    } else if (feeling === 'heavy') {
-        analysis += 'O peso que você sente ao pensar em dinheiro indica que suas finanças ocupam um espaço emocional significativo. ';
-        analysis += 'Vamos trabalhar para transformar essa carga em leveza através de organização e clareza. ';
-    } else if (feeling === 'light') {
-        analysis += 'Ótimo! Você já tem uma relação mais leve com o dinheiro. ';
-        analysis += 'Isso é uma excelente base para construir hábitos financeiros saudáveis. ';
+    // Resumo do questionario
+    analysis += 'RESUMO DO SEU PONTO DE PARTIDA\n\n';
+
+    analysis += `Sentimento com dinheiro: ${feelingLabels[feeling] || feeling}\n`;
+    analysis += `Boletos atrasados: ${hasOverdueBills === 'yes' ? 'Sim' : hasOverdueBills === 'no' ? 'Nao' : 'Incerto'}\n`;
+    analysis += `Renda mensal: R$ ${monthlyIncome.toLocaleString('pt-BR')}\n`;
+
+    if (topExpenses.length > 0) {
+        analysis += `Maiores despesas: ${topExpenses.filter(e => e).join(', ')}\n`;
     }
 
-    // Análise das emoções
-    if (emotions.includes('fear') || emotions.includes('anxiety')) {
-        analysis += 'A ansiedade e o medo financeiro geralmente vêm de incertezas sobre o futuro. ';
-        analysis += 'Nos próximos dias, vamos criar previsibilidade para acalmar esse sistema de alerta interno. ';
+    if (sharesFinances && sharesWith) {
+        analysis += `Divide financas com: ${sharesWith}\n`;
     }
 
-    if (emotions.includes('shame') || emotions.includes('guilt')) {
-        analysis += 'Vergonha e culpa são emoções que nos paralisam. Lembre-se: sua situação financeira não define quem você é. ';
+    analysis += `Maior bloqueio: ${blockerLabels[biggestBlocker] || biggestBlocker}\n`;
+
+    // Termometro
+    analysis += '\nTERMOMETRO RESPIRAR\n\n';
+    analysis += `Nota inicial: ${breatheScore}/10\n`;
+
+    if (breatheScore <= 3) {
+        analysis += 'Voce esta no vermelho. Essa sensacao de sufocamento e temporaria. ';
+        analysis += 'Os proximos dias vao te ajudar a criar um plano de acao concreto.\n';
+    } else if (breatheScore <= 6) {
+        analysis += 'Voce esta sobrevivendo, mas sem folga. ';
+        analysis += 'Vamos trabalhar para transformar essa sobrevivencia em tranquilidade.\n';
+    } else if (breatheScore <= 8) {
+        analysis += 'Voce esta respirando! Essa e uma boa base para construir. ';
+        analysis += 'Vamos aproveitar esse momento para criar habitos solidos.\n';
+    } else {
+        analysis += 'Otimo! Voce esta tranquilo. ';
+        analysis += 'Vamos usar essa clareza para otimizar ainda mais sua vida financeira.\n';
     }
 
-    // Análise dos bloqueios
-    if (blocks.includes('see_numbers')) {
-        analysis += 'Evitar ver os números é uma forma de proteção, mas impede o progresso. ';
-        analysis += 'Vamos começar devagar, com pequenas olhadas que vão ficando mais confortáveis. ';
+    if (breatheReason) {
+        analysis += `Motivo: "${breatheReason}"\n`;
     }
 
-    if (blocks.includes('home_conflict')) {
-        analysis += 'Conflitos em casa sobre dinheiro são muito comuns. Uma conversa estruturada pode ajudar a alinhar expectativas. ';
+    // Compromisso
+    analysis += '\nSEU COMPROMISSO DIARIO\n\n';
+    analysis += `Horario: ${periodLabels[dailyPeriod] || dailyPeriod} as ${dailyTime}\n`;
+    if (minimumStep) {
+        analysis += `Passo minimo: ${minimumStep}\n`;
     }
 
-    // Situação atual
-    if (issues.length > 3) {
-        analysis += 'Com múltiplos desafios financeiros simultâneos, é importante priorizar e atacar um de cada vez. ';
+    // Objetivo
+    if (mainGoal) {
+        analysis += '\nSEU OBJETIVO PRINCIPAL\n\n';
+        analysis += `"${mainGoal}"\n`;
     }
 
-    // Objetivos
-    if (goals.includes('breathe')) {
-        analysis += 'Seu objetivo de "respirar" mostra que você precisa primeiro de alívio emocional antes de pensar em estratégias. Vamos respeitar esse ritmo. ';
+    // Historico
+    if (triedBefore && whatBlocked) {
+        analysis += '\nO QUE TRAVOU NO PASSADO\n\n';
+        analysis += `${whatBlocked}\n`;
+        analysis += 'Vamos trabalhar para que isso nao se repita.\n';
     }
 
-    if (goals.includes('plan_30_90')) {
-        analysis += 'Ótimo que você quer um plano estruturado! Os próximos 15 dias vão te preparar exatamente para isso. ';
-    }
-
-    // Guia de reprogramação
-    analysis += '\n\n GUIA DE REPROGRAMAÇÃO: ';
-    analysis += 'Suas crenças sobre dinheiro foram formadas na infância, observando adultos ao redor. ';
-    analysis += 'Para reprogramá-las, comece observando seus pensamentos automáticos sobre dinheiro sem julgamento. ';
-    analysis += 'Depois, questione: "Essa crença é minha ou herdei de alguém?" ';
-    analysis += 'Finalmente, escolha uma nova crença que sirva melhor aos seus objetivos atuais.';
+    // Proximos passos
+    analysis += '\nPROXIMO PASSO\n\n';
+    analysis += 'Amanha voce vai fazer o Raio-X do Caos e mapear toda sua situacao financeira. ';
+    analysis += 'Lembre-se de entrar no app no horario que voce definiu!';
 
     return analysis;
 }
@@ -145,30 +190,35 @@ function generateDay2Analysis(formData: Record<string, unknown>): string {
     const incomeCount = Number(formData.incomeCount) || 0;
     const expenseCount = Number(formData.expenseCount) || 0;
     const debtCount = Number(formData.debtCount) || 0;
+    const emotionalNote = String(formData.emotionalNote || '');
 
-    let analysis = ' RESUMO FINANCEIRO: ';
+    let analysis = '📊 RESUMO FINANCEIRO:\n\n';
     analysis += `Você mapeou ${incomeCount} fontes de renda, ${expenseCount} despesas fixas e ${debtCount} dívidas. `;
 
     if (balance > 0) {
         const percentage = totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(0) : 0;
-        analysis += `\n\n SALDO POSITIVO: Sobram R$ ${balance.toFixed(2)}/mês (${percentage}% da renda). `;
+        analysis += `\n\n✅ SALDO POSITIVO: Sobram R$ ${balance.toFixed(2)}/mês (${percentage}% da renda). `;
         analysis += 'Esse valor pode ser direcionado para quitar dívidas ou criar sua reserva. ';
     } else if (balance < 0) {
-        analysis += `\n\n SALDO NEGATIVO: Faltam R$ ${Math.abs(balance).toFixed(2)}/mês. `;
+        analysis += `\n\n⚠️ SALDO NEGATIVO: Faltam R$ ${Math.abs(balance).toFixed(2)}/mês. `;
         analysis += 'É urgente revisar despesas ou buscar renda extra. Vamos trabalhar isso nos próximos dias. ';
     } else {
-        analysis += '\n\n SALDO ZERO: Suas contas fecham no limite, sem margem para imprevistos. ';
+        analysis += '\n\n⚖️ SALDO ZERO: Suas contas fecham no limite, sem margem para imprevistos. ';
     }
 
     if (totalDebtsMin > 0) {
         const debtPercentage = totalIncome > 0 ? ((totalDebtsMin / totalIncome) * 100).toFixed(0) : 0;
-        analysis += `\n\n COMPROMETIMENTO COM DÍVIDAS: R$ ${totalDebtsMin.toFixed(2)}/mês (${debtPercentage}% da renda). `;
+        analysis += `\n\n💳 COMPROMETIMENTO COM DÍVIDAS: R$ ${totalDebtsMin.toFixed(2)}/mês (${debtPercentage}% da renda). `;
         if (Number(debtPercentage) > 30) {
             analysis += 'Este percentual está alto. Priorize quitar as dívidas com maiores juros primeiro.';
         }
     }
 
-    analysis += '\n\n PRÓXIMO PASSO: Com esse mapa financeiro, você terá clareza para tomar decisões nos próximos dias do desafio.';
+    if (emotionalNote) {
+        analysis += `\n\n💭 REFLEXÃO EMOCIONAL: "${emotionalNote}"`;
+    }
+
+    analysis += '\n\n🚀 PRÓXIMO PASSO: Com esse mapa financeiro, você terá clareza para tomar decisões nos próximos dias do desafio.';
 
     return analysis;
 }

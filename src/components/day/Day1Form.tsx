@@ -134,8 +134,8 @@ const Day1Form: React.FC<Day1FormProps> = ({ onComplete, defaultValues = {} }) =
                                 key={emotion.id}
                                 onClick={() => toggleArrayItem('current_emotions', emotion.id)}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${(formData.current_emotions as string[])?.includes(emotion.id)
-                                        ? 'border-primary bg-primary/10 text-primary'
-                                        : 'border-border hover:border-primary/50'
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border hover:border-primary/50'
                                     }`}
                             >
                                 <span className="text-sm font-medium">{emotion.label}</span>
@@ -209,8 +209,8 @@ const Day1Form: React.FC<Day1FormProps> = ({ onComplete, defaultValues = {} }) =
                                 key={situation.id}
                                 onClick={() => toggleArrayItem('current_issues', situation.id)}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${(formData.current_issues as string[])?.includes(situation.id)
-                                        ? 'border-primary bg-primary/10 text-primary'
-                                        : 'border-border hover:border-primary/50'
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border hover:border-primary/50'
                                     }`}
                             >
                                 <span className="text-sm">{situation.label}</span>
@@ -264,8 +264,8 @@ const Day1Form: React.FC<Day1FormProps> = ({ onComplete, defaultValues = {} }) =
                                 key={block.id}
                                 onClick={() => toggleArrayItem('biggest_blocks', block.id)}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${(formData.biggest_blocks as string[])?.includes(block.id)
-                                        ? 'border-primary bg-primary/10 text-primary'
-                                        : 'border-border hover:border-primary/50'
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border hover:border-primary/50'
                                     }`}
                             >
                                 <span className="text-sm">{block.label}</span>
@@ -282,8 +282,8 @@ const Day1Form: React.FC<Day1FormProps> = ({ onComplete, defaultValues = {} }) =
                                 key={goal.id}
                                 onClick={() => toggleArrayItem('goals_15_days', goal.id)}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${(formData.goals_15_days as string[])?.includes(goal.id)
-                                        ? 'border-primary bg-primary/10 text-primary'
-                                        : 'border-border hover:border-primary/50'
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border hover:border-primary/50'
                                     }`}
                             >
                                 <span className="text-sm">{goal.label}</span>
@@ -293,11 +293,11 @@ const Day1Form: React.FC<Day1FormProps> = ({ onComplete, defaultValues = {} }) =
                 </div>
             </div>
 
-            {/* Seção 4: Termômetro "Respirar" */}
+            {/* Seção 4: Termômetro Emocional */}
             <div className="glass-card p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                     <Clock className="h-5 w-5 text-primary" />
-                    <h3 className="font-bold text-lg">Termômetro "Respirar"</h3>
+                    <h3 className="font-bold text-lg">Termômetro Emocional</h3>
                 </div>
 
                 <div className="space-y-4">

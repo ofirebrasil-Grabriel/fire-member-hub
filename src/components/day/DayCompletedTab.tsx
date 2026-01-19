@@ -7,6 +7,7 @@ import { generateDayAnalysis } from '@/lib/dayAnalysis';
 import { generateDayReport } from '@/lib/printReport';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { ReportRenderer } from './reports';
 
 interface DayCompletedTabProps {
     dayId: number;
@@ -54,6 +55,25 @@ export default function DayCompletedTab({
         }
     };
 
+    // Tenta renderizar um relatório customizado para o dia
+    const customReport = (
+        <ReportRenderer
+            dayId={dayId}
+            dayTitle={dayTitle}
+            formData={formData}
+            completedAt={completedAt}
+            metrics={metrics}
+            onPrint={handlePrint}
+            onEdit={onEdit}
+        />
+    );
+
+    // Se existe um relatório customizado para este dia, usa ele
+    if (customReport.type !== null && customReport.props.dayId && [1, 2].includes(dayId)) {
+        return customReport;
+    }
+
+    // Fallback: relatório genérico para dias sem customização
     return (
         <div className="space-y-6 animate-in fade-in duration-500" id="day-report">
             {/* Header de Sucesso */}

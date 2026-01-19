@@ -1,674 +1,822 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-    Plus, Trash2, DollarSign, Wallet, CreditCard, TrendingUp,
-    Check, AlertTriangle, Loader2
-} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowRight, ArrowLeft, Plus, X, Check, Trash2 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { useIncomeItems, IncomeItem } from '@/hooks/useIncomeItems';
-import { useFixedExpenses, FixedExpense } from '@/hooks/useFixedExpenses';
-import { useDebts, Debt, DebtInput } from '@/hooks/useDebts';
-import { Checkbox } from '@/components/ui/checkbox';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    PieChart, Pie, Cell, BarChart, Bar,
+    XAxis, YAxis, Tooltip, ResponsiveContainer
+} from 'recharts';
+import confetti from 'canvas-confetti';
 
 interface Day2FinancialMapperProps {
     onComplete: (formData: Record<string, unknown>) => void;
     defaultValues?: Record<string, unknown>;
 }
 
-type ItemType = 'income' | 'expense' | 'debt';
+type Step = 'income' | 'fixed' | 'daily' | 'debts' | 'summary';
 
-interface EditingIncome {
-    type: 'income';
-    data: Partial<IncomeItem>;
-    isNew: boolean;
-}
+const STEPS: Step[] = ['income', 'fixed', 'daily', 'debts', 'summary'];
 
-interface EditingExpense {
-    type: 'expense';
-    data: Partial<FixedExpense>;
-    isNew: boolean;
-}
-
-interface EditingDebt {
-    type: 'debt';
-    data: Partial<Debt> & { installments_remaining?: number; category?: string };
-    isNew: boolean;
-}
-
-type EditingItem = EditingIncome | EditingExpense | EditingDebt | null;
-
-const EXPENSE_CATEGORIES = [
-    { value: 'housing', label: '🏠 Habitação' },
-    { value: 'utilities', label: '💡 Serviços' },
-    { value: 'transport', label: '🚗 Transporte' },
-    { value: 'education', label: '📚 Educação' },
-    { value: 'health', label: '🏥 Saúde' },
-    { value: 'insurance', label: '🛡️ Seguros' },
-    { value: 'subscriptions', label: '📺 Assinaturas' },
-    { value: 'food', label: '🍔 Alimentação' },
-    { value: 'other', label: '📦 Outros' },
+// Categorias de contas fixas com emojis amigáveis
+const FIXED_CATEGORIES = [
+    { id: 'housing', emoji: '🏠', label: 'Casa/Aluguel' },
+    { id: 'electricity', emoji: '💡', label: 'Luz' },
+    { id: 'water', emoji: '💧', label: 'Água' },
+    { id: 'internet', emoji: '🌐', label: 'Internet' },
+    { id: 'phone', emoji: '📱', label: 'Celular' },
+    { id: 'transport', emoji: '🚗', label: 'Transporte' },
+    { id: 'health', emoji: '🏥', label: 'Saúde/Plano' },
+    { id: 'education', emoji: '📚', label: 'Educação' },
 ];
 
-const DEBT_TYPES = [
-    { value: 'credit_card', label: '💳 Cartão de Crédito' },
-    { value: 'loan', label: '🏦 Empréstimo' },
-    { value: 'financing', label: '🚗 Financiamento' },
-    { value: 'overdraft', label: '📊 Cheque Especial' },
-    { value: 'store', label: '🛒 Crediário' },
-    { value: 'personal', label: '👥 Dívida Pessoal' },
-    { value: 'other', label: '📦 Outros' },
+// Categorias de gastos do dia a dia
+const DAILY_CATEGORIES = [
+    { id: 'market', emoji: '🛒', label: 'Mercado' },
+    { id: 'food', emoji: '🍔', label: 'Comida fora' },
+    { id: 'transport', emoji: '⛽', label: 'Combustível/Uber' },
+    { id: 'pharmacy', emoji: '💊', label: 'Farmácia' },
+    { id: 'clothing', emoji: '👕', label: 'Roupas' },
+    { id: 'leisure', emoji: '🎬', label: 'Lazer' },
+    { id: 'subscriptions', emoji: '📱', label: 'Assinaturas' },
+    { id: 'other', emoji: '📦', label: 'Outros' },
 ];
 
-const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete }) => {
-    const [activeTab, setActiveTab] = useState<ItemType>('income');
-    const [editingItem, setEditingItem] = useState<EditingItem>(null);
+interface ExpenseItem {
+    id: string;
+    category: string;
+    emoji: string;
+    label: string;
+    amount: number;
+}
+
+interface DebtItem {
+    id: string;
+    name: string;
+    monthlyPayment: number;
+    totalAmount: number;
+}
+
+const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, defaultValues }) => {
+    const { user } = useAuth();
+    const [currentStepIndex, setCurrentStepIndex] = useState(0);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // Local state for items
-    const [incomeItems, setIncomeItems] = useState<IncomeItem[]>([]);
-    const [expenseItems, setExpenseItems] = useState<FixedExpense[]>([]);
-    const [isLoadingData, setIsLoadingData] = useState(true);
+    // Estado principal
+    const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
+    const [fixedExpenses, setFixedExpenses] = useState<Record<string, number>>({});
+    const [dailyExpenses, setDailyExpenses] = useState<ExpenseItem[]>([]);
+    const [debts, setDebts] = useState<DebtItem[]>([]);
+    const [hasDebts, setHasDebts] = useState<boolean | null>(null);
+    const [emotionalNote, setEmotionalNote] = useState('');
 
-    const incomeHook = useIncomeItems();
-    const expenseHook = useFixedExpenses();
-    const debtHook = useDebts();
+    // Modais
+    const [fixedModalOpen, setFixedModalOpen] = useState(false);
+    const [fixedModalCategory, setFixedModalCategory] = useState<typeof FIXED_CATEGORIES[0] | null>(null);
+    const [fixedModalValue, setFixedModalValue] = useState('');
 
-    // Fetch data on mount
+    const [dailyModalOpen, setDailyModalOpen] = useState(false);
+    const [dailyModalCategory, setDailyModalCategory] = useState<typeof DAILY_CATEGORIES[0] | null>(null);
+    const [dailyModalValue, setDailyModalValue] = useState('');
+
+    const [debtModalOpen, setDebtModalOpen] = useState(false);
+    const [debtName, setDebtName] = useState('');
+    const [debtMonthly, setDebtMonthly] = useState('');
+    const [debtTotal, setDebtTotal] = useState('');
+
+    const currentStep = STEPS[currentStepIndex];
+    const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
+
+    // Cálculos
+    const totalFixed = useMemo(() =>
+        Object.values(fixedExpenses).reduce((sum, val) => sum + val, 0),
+        [fixedExpenses]
+    );
+
+    const totalDaily = useMemo(() =>
+        dailyExpenses.reduce((sum, item) => sum + item.amount, 0),
+        [dailyExpenses]
+    );
+
+    const totalDebtPayments = useMemo(() =>
+        debts.reduce((sum, item) => sum + item.monthlyPayment, 0),
+        [debts]
+    );
+
+    const totalDebtAmount = useMemo(() =>
+        debts.reduce((sum, item) => sum + item.totalAmount, 0),
+        [debts]
+    );
+
+    const totalExpenses = totalFixed + totalDaily + totalDebtPayments;
+    const balance = monthlyIncome - totalExpenses;
+
+    // Carregar dados do Dia 1 e existentes
     useEffect(() => {
         const loadData = async () => {
-            setIsLoadingData(true);
+            if (!user) return;
+            setLoading(true);
             try {
-                const [income, expenses] = await Promise.all([
-                    incomeHook.fetchAll(),
-                    expenseHook.fetchAll(),
-                ]);
-                setIncomeItems(income);
-                setExpenseItems(expenses);
+                // Buscar renda do Dia 1
+                const { data: assessment } = await supabase
+                    .from('initial_assessment')
+                    .select('monthly_income')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (assessment?.monthly_income) {
+                    setMonthlyIncome(assessment.monthly_income);
+                }
+
+                // TODO: Carregar dados existentes se houver
             } catch (error) {
-                console.error('Error loading data:', error);
+                console.error('Erro ao carregar dados:', error);
             } finally {
-                setIsLoadingData(false);
+                setLoading(false);
             }
         };
         loadData();
-    }, []);
+    }, [user]);
 
-    // Calculations
-    const totals = useMemo(() => {
-        const income = incomeItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-        const expenses = expenseItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-        const debtsMin = debtHook.debts.reduce((sum, debt) => sum + (debt.installment_value || 0), 0);
-        const debtsTotal = debtHook.debts.reduce((sum, debt) => sum + (debt.total_balance || 0), 0);
-        return {
-            income,
-            expenses,
-            debtsMin,
-            debtsTotal,
-            balance: income - expenses - debtsMin,
-            itemsCount: incomeItems.length + expenseItems.length + debtHook.debts.length,
-        };
-    }, [incomeItems, expenseItems, debtHook.debts]);
-
-    // Open modal for new item
-    const handleAddNew = () => {
-        if (activeTab === 'income') {
-            setEditingItem({
-                type: 'income',
-                data: { source: '', amount: 0, received_on: 5, recurrence: 'monthly' },
-                isNew: true,
-            });
-        } else if (activeTab === 'expense') {
-            setEditingItem({
-                type: 'expense',
-                data: { name: '', amount: 0, category: 'other', due_date: 10 },
-                isNew: true,
-            });
-        } else {
-            setEditingItem({
-                type: 'debt',
-                data: { creditor: '', total_balance: 0, installment_value: 0, installments_remaining: 1, due_day: 10, is_critical: false, type: 'other' },
-                isNew: true,
-            });
+    // Navegação
+    const canProceed = () => {
+        switch (currentStep) {
+            case 'income':
+                return monthlyIncome > 0;
+            case 'fixed':
+                return true; // Pode pular
+            case 'daily':
+                return true; // Pode pular
+            case 'debts':
+                return hasDebts !== null;
+            case 'summary':
+                return true;
+            default:
+                return false;
         }
     };
 
-    // Open modal for editing
-    const handleEditIncome = (item: IncomeItem) => {
-        setEditingItem({ type: 'income', data: { ...item }, isNew: false });
-    };
-
-    const handleEditExpense = (item: FixedExpense) => {
-        setEditingItem({ type: 'expense', data: { ...item }, isNew: false });
-    };
-
-    const handleEditDebt = (item: Debt) => {
-        setEditingItem({ type: 'debt', data: { ...item }, isNew: false });
-    };
-
-    // Reload data
-    const reloadData = async () => {
-        const [income, expenses] = await Promise.all([
-            incomeHook.fetchAll(),
-            expenseHook.fetchAll(),
-        ]);
-        setIncomeItems(income);
-        setExpenseItems(expenses);
-    };
-
-    // Save item
-    const handleSave = async () => {
-        if (!editingItem) return;
-        setSaving(true);
-        try {
-            if (editingItem.type === 'income') {
-                const data = editingItem.data;
-                if (editingItem.isNew) {
-                    await incomeHook.create({
-                        source: data.source || '',
-                        amount: data.amount || 0,
-                        received_on: data.received_on,
-                        recurrence: data.recurrence as 'monthly' | 'weekly' | 'biweekly' | 'one_time',
-                    });
-                } else {
-                    await incomeHook.update(data.id!, {
-                        source: data.source,
-                        amount: data.amount,
-                        received_on: data.received_on,
-                        recurrence: data.recurrence as 'monthly' | 'weekly' | 'biweekly' | 'one_time',
-                    });
-                }
-                await reloadData();
-            } else if (editingItem.type === 'expense') {
-                const data = editingItem.data;
-                if (editingItem.isNew) {
-                    await expenseHook.create({
-                        name: data.name || '',
-                        amount: data.amount || 0,
-                        category: data.category,
-                        due_date: data.due_date,
-                    });
-                } else {
-                    await expenseHook.update(data.id!, {
-                        name: data.name,
-                        amount: data.amount,
-                        category: data.category,
-                        due_date: data.due_date,
-                    });
-                }
-                await reloadData();
-            } else if (editingItem.type === 'debt') {
-                const data = editingItem.data;
-                const debtPayload: DebtInput = {
-                    creditor: data.creditor || '',
-                    total_balance: data.total_balance || 0,
-                    installment_value: data.installment_value || 0,
-                    due_day: data.due_day || 10,
-                    is_critical: data.is_critical || false,
-                    type: data.type || 'other',
-                };
-                if (editingItem.isNew) {
-                    await debtHook.addDebt.mutateAsync(debtPayload);
-                } else {
-                    await debtHook.updateDebt.mutateAsync({ id: data.id!, payload: debtPayload });
-                }
-            }
-            toast({ title: editingItem.isNew ? 'Item adicionado!' : 'Item atualizado!' });
-            setEditingItem(null);
-        } catch (err) {
-            console.error('Save error:', err);
-            toast({ title: 'Erro ao salvar', variant: 'destructive' });
-        } finally {
-            setSaving(false);
+    const nextStep = () => {
+        if (currentStepIndex < STEPS.length - 1) {
+            setCurrentStepIndex(prev => prev + 1);
         }
     };
 
-    // Delete item
-    const handleDelete = async () => {
-        if (!editingItem || editingItem.isNew) return;
-        setSaving(true);
-        try {
-            const id = editingItem.data.id;
-            if (!id) return;
-
-            if (editingItem.type === 'income') {
-                await incomeHook.remove(id);
-                await reloadData();
-            } else if (editingItem.type === 'expense') {
-                await expenseHook.remove(id);
-                await reloadData();
-            } else if (editingItem.type === 'debt') {
-                await debtHook.deleteDebt.mutateAsync(id);
-            }
-            toast({ title: 'Item removido!' });
-            setEditingItem(null);
-        } catch {
-            toast({ title: 'Erro ao remover', variant: 'destructive' });
-        } finally {
-            setSaving(false);
+    const prevStep = () => {
+        if (currentStepIndex > 0) {
+            setCurrentStepIndex(prev => prev - 1);
         }
     };
 
-    // Update editing item field
-    const updateField = (field: string, value: unknown) => {
-        if (!editingItem) return;
-        setEditingItem({
-            ...editingItem,
-            data: { ...editingItem.data, [field]: value },
-        } as EditingItem);
+    // Handlers de despesas fixas
+    const openFixedModal = (category: typeof FIXED_CATEGORIES[0]) => {
+        setFixedModalCategory(category);
+        setFixedModalValue(fixedExpenses[category.id]?.toString() || '');
+        setFixedModalOpen(true);
     };
 
-    // Complete day
-    const handleComplete = () => {
-        onComplete({
-            totalIncome: totals.income,
-            totalExpenses: totals.expenses,
-            totalDebtsMin: totals.debtsMin,
-            totalDebtsBalance: totals.debtsTotal,
-            balance: totals.balance,
-            incomeCount: incomeItems.length,
-            expenseCount: expenseItems.length,
-            debtCount: debtHook.debts.length,
+    const saveFixedExpense = () => {
+        if (fixedModalCategory) {
+            const value = parseFloat(fixedModalValue.replace(/\D/g, '')) / 100 || 0;
+            setFixedExpenses(prev => ({
+                ...prev,
+                [fixedModalCategory.id]: value
+            }));
+            setFixedModalOpen(false);
+            setFixedModalValue('');
+        }
+    };
+
+    const removeFixedExpense = (categoryId: string) => {
+        setFixedExpenses(prev => {
+            const updated = { ...prev };
+            delete updated[categoryId];
+            return updated;
         });
     };
 
-    // Check if can complete
-    const canComplete = totals.itemsCount > 0;
+    // Handlers de gastos diários
+    const openDailyModal = (category?: typeof DAILY_CATEGORIES[0]) => {
+        setDailyModalCategory(category || null);
+        setDailyModalValue('');
+        setDailyModalOpen(true);
+    };
 
-    if (isLoadingData || debtHook.isLoading) {
+    const saveDailyExpense = () => {
+        if (dailyModalCategory) {
+            const value = parseFloat(dailyModalValue.replace(/\D/g, '')) / 100 || 0;
+            if (value > 0) {
+                setDailyExpenses(prev => [...prev, {
+                    id: Date.now().toString(),
+                    category: dailyModalCategory.id,
+                    emoji: dailyModalCategory.emoji,
+                    label: dailyModalCategory.label,
+                    amount: value
+                }]);
+            }
+            setDailyModalOpen(false);
+            setDailyModalValue('');
+            setDailyModalCategory(null);
+        }
+    };
+
+    const removeDailyExpense = (id: string) => {
+        setDailyExpenses(prev => prev.filter(item => item.id !== id));
+    };
+
+    // Handlers de dívidas
+    const saveDebt = () => {
+        const monthly = parseFloat(debtMonthly.replace(/\D/g, '')) / 100 || 0;
+        const total = parseFloat(debtTotal.replace(/\D/g, '')) / 100 || 0;
+
+        if (debtName && monthly > 0) {
+            setDebts(prev => [...prev, {
+                id: Date.now().toString(),
+                name: debtName,
+                monthlyPayment: monthly,
+                totalAmount: total || monthly * 12
+            }]);
+            setDebtModalOpen(false);
+            setDebtName('');
+            setDebtMonthly('');
+            setDebtTotal('');
+        }
+    };
+
+    const removeDebt = (id: string) => {
+        setDebts(prev => prev.filter(item => item.id !== id));
+    };
+
+    // Input de moeda
+    const formatInputCurrency = (value: string) => {
+        const numbers = value.replace(/\D/g, '');
+        const amount = parseInt(numbers || '0') / 100;
+        return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    // Salvar e concluir
+    const handleComplete = async () => {
+        setSaving(true);
+        try {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
+            const formData = {
+                totalIncome: monthlyIncome,
+                totalFixed,
+                totalVariable: totalDaily,
+                totalDebtsMin: totalDebtPayments,
+                totalDebtAmount,
+                balance,
+                incomeCount: 1,
+                expenseCount: Object.keys(fixedExpenses).length,
+                debtCount: debts.length,
+                emotionalNote,
+                fixedExpenses,
+                dailyExpenses,
+                debts,
+            };
+
+            onComplete(formData);
+        } catch (error) {
+            toast({
+                title: 'Erro ao salvar',
+                description: 'Tente novamente.',
+                variant: 'destructive'
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
     }
 
     return (
-        <div className="space-y-4">
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ItemType)}>
-                <TabsList className="grid grid-cols-3 w-full">
-                    <TabsTrigger value="income" className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        <span className="hidden sm:inline">Receitas</span>
-                        <span className="text-xs opacity-70">({incomeItems.length})</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="expense" className="flex items-center gap-2">
-                        <Wallet className="h-4 w-4" />
-                        <span className="hidden sm:inline">Despesas</span>
-                        <span className="text-xs opacity-70">({expenseItems.length})</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="debt" className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        <span className="hidden sm:inline">Dívidas</span>
-                        <span className="text-xs opacity-70">({debtHook.debts.length})</span>
-                    </TabsTrigger>
-                </TabsList>
-
-                {/* Income Tab */}
-                <TabsContent value="income" className="mt-4">
-                    <div className="space-y-2">
-                        {incomeItems.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                                <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                                <p>Nenhuma receita cadastrada</p>
-                                <p className="text-sm">Clique em + para adicionar</p>
-                            </div>
-                        ) : (
-                            incomeItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => handleEditIncome(item)}
-                                    className="flex items-center justify-between p-4 rounded-xl glass-card border border-border/50 cursor-pointer hover:border-primary/30 transition-all"
-                                >
-                                    <div>
-                                        <p className="font-medium">{item.source}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Dia {item.received_on} • {item.recurrence === 'monthly' ? 'Mensal' : item.recurrence}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-green-500">{formatCurrency(item.amount)}</p>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </TabsContent>
-
-                {/* Expenses Tab */}
-                <TabsContent value="expense" className="mt-4">
-                    <div className="space-y-2">
-                        {expenseItems.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                                <Wallet className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                                <p>Nenhuma despesa cadastrada</p>
-                                <p className="text-sm">Clique em + para adicionar</p>
-                            </div>
-                        ) : (
-                            expenseItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => handleEditExpense(item)}
-                                    className="flex items-center justify-between p-4 rounded-xl glass-card border border-border/50 cursor-pointer hover:border-primary/30 transition-all"
-                                >
-                                    <div>
-                                        <p className="font-medium">{item.name}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {EXPENSE_CATEGORIES.find(c => c.value === item.category)?.label || item.category} • Vence dia {item.due_date}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-red-500">{formatCurrency(item.amount)}</p>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </TabsContent>
-
-                {/* Debts Tab */}
-                <TabsContent value="debt" className="mt-4">
-                    <div className="space-y-2">
-                        {debtHook.debts.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                                <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                                <p>Nenhuma dívida cadastrada</p>
-                                <p className="text-sm">Clique em + para adicionar</p>
-                            </div>
-                        ) : (
-                            debtHook.debts.map((item) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => handleEditDebt(item)}
-                                    className={cn(
-                                        "flex items-center justify-between p-4 rounded-xl glass-card border cursor-pointer hover:border-primary/30 transition-all",
-                                        item.is_critical ? "border-red-500/50 bg-red-500/5" : "border-border/50"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        {item.is_critical && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                                        <div>
-                                            <p className="font-medium">{item.creditor}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {formatCurrency(item.installment_value || 0)}/mês • Dia {item.due_day}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-orange-500">{formatCurrency(item.total_balance || 0)}</p>
-                                        <p className="text-xs text-muted-foreground">total</p>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </TabsContent>
-            </Tabs>
-
-            {/* Add Button */}
-            <Button onClick={handleAddNew} className="w-full" variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar {activeTab === 'income' ? 'Receita' : activeTab === 'expense' ? 'Despesa' : 'Dívida'}
-            </Button>
-
-            {/* Summary */}
-            <div className="glass-card p-4 space-y-3">
-                <h4 className="font-bold text-center mb-4">📊 Resumo Financeiro</h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                        <p className="text-muted-foreground text-xs">Receitas</p>
-                        <p className="font-bold text-green-500 text-lg">{formatCurrency(totals.income)}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <p className="text-muted-foreground text-xs">Despesas</p>
-                        <p className="font-bold text-red-500 text-lg">{formatCurrency(totals.expenses)}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                        <p className="text-muted-foreground text-xs">Dívidas</p>
-                        <p className="font-bold text-orange-500 text-lg">{formatCurrency(totals.debtsMin)}</p>
-                    </div>
-                    <div className={cn(
-                        "p-3 rounded-lg border",
-                        totals.balance >= 0
-                            ? "bg-green-500/10 border-green-500/20"
-                            : "bg-red-500/10 border-red-500/20"
-                    )}>
-                        <p className="text-muted-foreground text-xs">Saldo</p>
-                        <p className={cn(
-                            "font-bold text-lg",
-                            totals.balance >= 0 ? "text-green-500" : "text-red-500"
-                        )}>
-                            {formatCurrency(totals.balance)}
-                        </p>
-                    </div>
+        <div className="space-y-6 pb-6">
+            {/* Barra de Progresso */}
+            <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Passo {currentStepIndex + 1} de {STEPS.length}</span>
+                    <span>{Math.round(progress)}%</span>
                 </div>
+                <Progress value={progress} className="h-2" />
             </div>
 
-            {/* Complete Button */}
-            <Button
-                onClick={handleComplete}
-                disabled={!canComplete}
-                className="w-full btn-fire"
-            >
-                <Check className="mr-2 h-4 w-4" />
-                Concluir Dia 2
-            </Button>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={currentStep}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {/* STEP 1: RENDA */}
+                    {currentStep === 'income' && (
+                        <div className="space-y-6">
+                            <div className="text-center space-y-2">
+                                <span className="text-4xl">💰</span>
+                                <h2 className="text-xl font-bold">Quanto você ganha por mês?</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Inclua salário, freelas, pensão... tudo que entra
+                                </p>
+                            </div>
 
-            {/* Edit Modal */}
-            <Dialog open={editingItem !== null} onOpenChange={(open) => !open && setEditingItem(null)}>
+                            <div className="max-w-xs mx-auto">
+                                <Input
+                                    type="text"
+                                    inputMode="numeric"
+                                    className="text-center text-2xl font-bold h-16 bg-white/5"
+                                    placeholder="R$ 0,00"
+                                    value={monthlyIncome > 0 ? formatCurrency(monthlyIncome) : ''}
+                                    onChange={(e) => {
+                                        const value = parseFloat(e.target.value.replace(/\D/g, '')) / 100 || 0;
+                                        setMonthlyIncome(value);
+                                    }}
+                                />
+                            </div>
+
+                            {monthlyIncome > 0 && (
+                                <motion.p
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-center text-sm text-green-500"
+                                >
+                                    ✓ Renda registrada!
+                                </motion.p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* STEP 2: CONTAS FIXAS */}
+                    {currentStep === 'fixed' && (
+                        <div className="space-y-6">
+                            <div className="text-center space-y-2">
+                                <span className="text-4xl">🏠</span>
+                                <h2 className="text-xl font-bold">Contas que você paga todo mês</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Toque em cada item para adicionar o valor
+                                </p>
+                            </div>
+
+                            {/* Grid de categorias */}
+                            <div className="grid grid-cols-4 gap-3">
+                                {FIXED_CATEGORIES.map((cat) => {
+                                    const hasValue = fixedExpenses[cat.id] > 0;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => openFixedModal(cat)}
+                                            className={cn(
+                                                "flex flex-col items-center p-3 rounded-xl transition-all",
+                                                "border-2",
+                                                hasValue
+                                                    ? "border-green-500 bg-green-500/10"
+                                                    : "border-border/50 bg-surface/30 hover:bg-surface/50"
+                                            )}
+                                        >
+                                            <span className="text-2xl mb-1">{cat.emoji}</span>
+                                            <span className="text-xs text-center leading-tight">{cat.label}</span>
+                                            {hasValue && (
+                                                <span className="text-xs text-green-500 font-bold mt-1">
+                                                    {formatCurrency(fixedExpenses[cat.id])}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Total */}
+                            {totalFixed > 0 && (
+                                <Card className="bg-primary/10 border-primary/30">
+                                    <CardContent className="py-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium">Total de contas fixas</span>
+                                            <span className="text-xl font-bold text-primary">
+                                                {formatCurrency(totalFixed)}
+                                            </span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    )}
+
+                    {/* STEP 3: GASTOS DO DIA A DIA */}
+                    {currentStep === 'daily' && (
+                        <div className="space-y-6">
+                            <div className="text-center space-y-2">
+                                <span className="text-4xl">🛒</span>
+                                <h2 className="text-xl font-bold">Gastos do dia a dia</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Mercado, restaurantes, uber... quanto você gasta por mês?
+                                </p>
+                            </div>
+
+                            {/* Botão adicionar */}
+                            <Button
+                                onClick={() => openDailyModal()}
+                                className="w-full btn-fire"
+                                size="lg"
+                            >
+                                <Plus className="mr-2 h-5 w-5" />
+                                Adicionar gasto
+                            </Button>
+
+                            {/* Lista de gastos */}
+                            {dailyExpenses.length > 0 && (
+                                <div className="space-y-2">
+                                    {dailyExpenses.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-center justify-between p-3 rounded-lg bg-surface/50 border border-border/30"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xl">{item.emoji}</span>
+                                                <span>{item.label}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold">{formatCurrency(item.amount)}</span>
+                                                <button
+                                                    onClick={() => removeDailyExpense(item.id)}
+                                                    className="p-1 hover:bg-red-500/20 rounded"
+                                                >
+                                                    <X className="h-4 w-4 text-red-500" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Total */}
+                            {totalDaily > 0 && (
+                                <Card className="bg-orange-500/10 border-orange-500/30">
+                                    <CardContent className="py-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium">Total de gastos do dia a dia</span>
+                                            <span className="text-xl font-bold text-orange-500">
+                                                {formatCurrency(totalDaily)}
+                                            </span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {dailyExpenses.length === 0 && (
+                                <p className="text-center text-sm text-muted-foreground">
+                                    💡 Não precisa ser exato. Coloque uma estimativa.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* STEP 4: DÍVIDAS */}
+                    {currentStep === 'debts' && (
+                        <div className="space-y-6">
+                            <div className="text-center space-y-2">
+                                <span className="text-4xl">💳</span>
+                                <h2 className="text-xl font-bold">Você está devendo algo?</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Cartão, empréstimo, financiamento...
+                                </p>
+                            </div>
+
+                            {hasDebts === null && (
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => setHasDebts(true)}
+                                        className="w-full p-4 rounded-xl border-2 border-border/50 bg-surface/30 hover:bg-surface/50 transition-all text-left"
+                                    >
+                                        <span className="text-lg">😔 Sim, tenho dívidas</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setHasDebts(false)}
+                                        className="w-full p-4 rounded-xl border-2 border-green-500/50 bg-green-500/10 hover:bg-green-500/20 transition-all text-left"
+                                    >
+                                        <span className="text-lg">✅ Não, estou em dia!</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {hasDebts === true && (
+                                <div className="space-y-4">
+                                    <Button
+                                        onClick={() => setDebtModalOpen(true)}
+                                        variant="outline"
+                                        className="w-full"
+                                    >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Adicionar dívida
+                                    </Button>
+
+                                    {debts.map((debt) => (
+                                        <div
+                                            key={debt.id}
+                                            className="p-4 rounded-lg bg-red-500/10 border border-red-500/30"
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-medium">{debt.name}</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Parcela: {formatCurrency(debt.monthlyPayment)}/mês
+                                                    </p>
+                                                    {debt.totalAmount > 0 && (
+                                                        <p className="text-xs text-red-400">
+                                                            Total: {formatCurrency(debt.totalAmount)}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => removeDebt(debt.id)}
+                                                    className="p-1 hover:bg-red-500/20 rounded"
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        onClick={() => setHasDebts(null)}
+                                        className="text-sm text-muted-foreground hover:text-foreground"
+                                    >
+                                        ← Voltar
+                                    </button>
+                                </div>
+                            )}
+
+                            {hasDebts === false && (
+                                <div className="text-center space-y-4">
+                                    <p className="text-green-500">🎉 Ótimo! Você está no caminho certo!</p>
+                                    <button
+                                        onClick={() => setHasDebts(null)}
+                                        className="text-sm text-muted-foreground hover:text-foreground"
+                                    >
+                                        ← Voltar
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* STEP 5: RESUMO */}
+                    {currentStep === 'summary' && (
+                        <div className="space-y-6">
+                            <div className="text-center space-y-2">
+                                <span className="text-4xl">📊</span>
+                                <h2 className="text-xl font-bold">Seu Raio-X Financeiro</h2>
+                            </div>
+
+                            {/* Cards de resumo */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                                    <span>💰 Você ganha</span>
+                                    <span className="text-xl font-bold text-green-500">{formatCurrency(monthlyIncome)}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                    <span>🏠 Contas fixas</span>
+                                    <span className="text-xl font-bold text-blue-500">-{formatCurrency(totalFixed)}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-4 rounded-lg bg-orange-500/10 border border-orange-500/30">
+                                    <span>🛒 Dia a dia</span>
+                                    <span className="text-xl font-bold text-orange-500">-{formatCurrency(totalDaily)}</span>
+                                </div>
+                                {totalDebtPayments > 0 && (
+                                    <div className="flex justify-between items-center p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+                                        <span>💳 Dívidas</span>
+                                        <span className="text-xl font-bold text-red-500">-{formatCurrency(totalDebtPayments)}</span>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-border/50 my-2" />
+
+                                <div className={cn(
+                                    "flex justify-between items-center p-4 rounded-lg",
+                                    balance >= 0 ? "bg-green-500/20 border-2 border-green-500" : "bg-red-500/20 border-2 border-red-500"
+                                )}>
+                                    <span className="font-bold">{balance >= 0 ? '✅ Sobra' : '⚠️ Falta'}</span>
+                                    <span className={cn(
+                                        "text-2xl font-bold",
+                                        balance >= 0 ? "text-green-500" : "text-red-500"
+                                    )}>
+                                        {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Mensagem */}
+                            {balance < 0 && (
+                                <p className="text-sm text-center text-yellow-500 bg-yellow-500/10 p-3 rounded-lg">
+                                    💡 Não se preocupe! Nos próximos dias vamos trabalhar juntos para equilibrar isso.
+                                </p>
+                            )}
+
+                            {/* Reflexão */}
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">Como você se sente vendo esses números?</p>
+                                <Textarea
+                                    placeholder="Sinceridade total... assustado, aliviado, surpreso?"
+                                    value={emotionalNote}
+                                    onChange={(e) => setEmotionalNote(e.target.value)}
+                                    className="min-h-[80px] bg-white/5"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
+
+            {/* Navegação */}
+            <div className="flex gap-3 pt-4">
+                {currentStepIndex > 0 && (
+                    <Button variant="outline" onClick={prevStep} className="flex-1">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Voltar
+                    </Button>
+                )}
+
+                {currentStep !== 'summary' ? (
+                    <Button
+                        onClick={nextStep}
+                        disabled={!canProceed()}
+                        className="flex-1 btn-fire"
+                    >
+                        Próximo
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                ) : (
+                    <Button
+                        onClick={handleComplete}
+                        disabled={saving}
+                        className="flex-1 btn-fire"
+                    >
+                        {saving ? 'Salvando...' : (
+                            <>
+                                <Check className="mr-2 h-4 w-4" />
+                                Concluir Raio-X
+                            </>
+                        )}
+                    </Button>
+                )}
+            </div>
+
+            {/* MODAIS */}
+
+            {/* Modal de despesa fixa */}
+            <Dialog open={fixedModalOpen} onOpenChange={setFixedModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <span className="text-2xl">{fixedModalCategory?.emoji}</span>
+                            Quanto você paga de {fixedModalCategory?.label.toLowerCase()}?
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <Input
+                            type="text"
+                            inputMode="numeric"
+                            className="text-center text-xl font-bold h-14"
+                            placeholder="R$ 0,00"
+                            value={fixedModalValue ? formatInputCurrency(fixedModalValue) : ''}
+                            onChange={(e) => setFixedModalValue(e.target.value.replace(/\D/g, ''))}
+                            autoFocus
+                        />
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setFixedModalOpen(false)} className="flex-1">
+                                Cancelar
+                            </Button>
+                            <Button onClick={saveFixedExpense} className="flex-1 btn-fire">
+                                Salvar
+                            </Button>
+                        </div>
+                        {fixedExpenses[fixedModalCategory?.id || ''] > 0 && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    removeFixedExpense(fixedModalCategory?.id || '');
+                                    setFixedModalOpen(false);
+                                }}
+                                className="w-full text-red-500 hover:text-red-400"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Remover este gasto
+                            </Button>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de gasto diário */}
+            <Dialog open={dailyModalOpen} onOpenChange={setDailyModalOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>
-                            {editingItem?.isNew ? 'Adicionar' : 'Editar'}{' '}
-                            {editingItem?.type === 'income' ? 'Receita' : editingItem?.type === 'expense' ? 'Despesa' : 'Dívida'}
+                            {dailyModalCategory ? `${dailyModalCategory.emoji} ${dailyModalCategory.label}` : 'Adicionar gasto'}
                         </DialogTitle>
                     </DialogHeader>
-
-                    <div className="space-y-4 py-4">
-                        {/* Income Form */}
-                        {editingItem?.type === 'income' && (
-                            <>
-                                <div>
-                                    <Label>Fonte da receita</Label>
-                                    <Input
-                                        placeholder="Ex: Salário, Freelance..."
-                                        value={editingItem.data.source || ''}
-                                        onChange={(e) => updateField('source', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <Label>Valor</Label>
-                                    <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            type="number"
-                                            className="pl-9"
-                                            placeholder="0,00"
-                                            value={editingItem.data.amount || ''}
-                                            onChange={(e) => updateField('amount', parseFloat(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label>Dia de recebimento</Label>
-                                        <Input
-                                            type="number"
-                                            min={1}
-                                            max={31}
-                                            value={editingItem.data.received_on || 5}
-                                            onChange={(e) => updateField('received_on', parseInt(e.target.value) || 5)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label>Frequência</Label>
-                                        <Select
-                                            value={editingItem.data.recurrence || 'monthly'}
-                                            onValueChange={(v) => updateField('recurrence', v)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="monthly">Mensal</SelectItem>
-                                                <SelectItem value="weekly">Semanal</SelectItem>
-                                                <SelectItem value="biweekly">Quinzenal</SelectItem>
-                                                <SelectItem value="one_time">Única</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                            </>
+                    <div className="space-y-4">
+                        {!dailyModalCategory && (
+                            <div className="grid grid-cols-4 gap-2">
+                                {DAILY_CATEGORIES.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setDailyModalCategory(cat)}
+                                        className="flex flex-col items-center p-2 rounded-lg border border-border/50 hover:bg-surface/50"
+                                    >
+                                        <span className="text-xl">{cat.emoji}</span>
+                                        <span className="text-xs">{cat.label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         )}
 
-                        {/* Expense Form */}
-                        {editingItem?.type === 'expense' && (
+                        {dailyModalCategory && (
                             <>
-                                <div>
-                                    <Label>Nome da despesa</Label>
-                                    <Input
-                                        placeholder="Ex: Aluguel, Internet..."
-                                        value={editingItem.data.name || ''}
-                                        onChange={(e) => updateField('name', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <Label>Categoria</Label>
-                                    <Select
-                                        value={editingItem.data.category || 'other'}
-                                        onValueChange={(v) => updateField('category', v)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {EXPENSE_CATEGORIES.map((cat) => (
-                                                <SelectItem key={cat.value} value={cat.value}>
-                                                    {cat.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label>Valor</Label>
-                                        <Input
-                                            type="number"
-                                            placeholder="0,00"
-                                            value={editingItem.data.amount || ''}
-                                            onChange={(e) => updateField('amount', parseFloat(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label>Dia vencimento</Label>
-                                        <Input
-                                            type="number"
-                                            min={1}
-                                            max={31}
-                                            value={editingItem.data.due_date || 10}
-                                            onChange={(e) => updateField('due_date', parseInt(e.target.value) || 10)}
-                                        />
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Debt Form */}
-                        {editingItem?.type === 'debt' && (
-                            <>
-                                <div>
-                                    <Label>Credor</Label>
-                                    <Input
-                                        placeholder="Ex: Nubank, Santander..."
-                                        value={editingItem.data.creditor || ''}
-                                        onChange={(e) => updateField('creditor', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <Label>Tipo</Label>
-                                    <Select
-                                        value={editingItem.data.type || 'other'}
-                                        onValueChange={(v) => updateField('type', v)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {DEBT_TYPES.map((t) => (
-                                                <SelectItem key={t.value} value={t.value}>
-                                                    {t.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label>Saldo total</Label>
-                                        <Input
-                                            type="number"
-                                            placeholder="0,00"
-                                            value={editingItem.data.total_balance || ''}
-                                            onChange={(e) => updateField('total_balance', parseFloat(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label>Valor parcela</Label>
-                                        <Input
-                                            type="number"
-                                            placeholder="0,00"
-                                            value={editingItem.data.installment_value || ''}
-                                            onChange={(e) => updateField('installment_value', parseFloat(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label>Dia vencimento</Label>
-                                    <Input
-                                        type="number"
-                                        min={1}
-                                        max={31}
-                                        value={editingItem.data.due_day || 10}
-                                        onChange={(e) => updateField('due_day', parseInt(e.target.value) || 10)}
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="is_critical"
-                                        checked={editingItem.data.is_critical || false}
-                                        onCheckedChange={(checked) => updateField('is_critical', checked)}
-                                    />
-                                    <Label htmlFor="is_critical" className="flex items-center gap-2 cursor-pointer">
-                                        <AlertTriangle className="h-4 w-4 text-red-500" />
-                                        Dívida crítica (juros altos ou risco de nome sujo)
-                                    </Label>
+                                <p className="text-sm text-muted-foreground text-center">
+                                    Quanto você gasta de {dailyModalCategory.label.toLowerCase()} por mês?
+                                </p>
+                                <Input
+                                    type="text"
+                                    inputMode="numeric"
+                                    className="text-center text-xl font-bold h-14"
+                                    placeholder="R$ 0,00"
+                                    value={dailyModalValue ? formatInputCurrency(dailyModalValue) : ''}
+                                    onChange={(e) => setDailyModalValue(e.target.value.replace(/\D/g, ''))}
+                                    autoFocus
+                                />
+                                <div className="flex gap-2">
+                                    <Button variant="outline" onClick={() => setDailyModalCategory(null)} className="flex-1">
+                                        ← Voltar
+                                    </Button>
+                                    <Button onClick={saveDailyExpense} className="flex-1 btn-fire">
+                                        Adicionar
+                                    </Button>
                                 </div>
                             </>
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
 
-                    <DialogFooter className="flex gap-2">
-                        {!editingItem?.isNew && (
-                            <Button variant="destructive" onClick={handleDelete} disabled={saving}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
+            {/* Modal de dívida */}
+            <Dialog open={debtModalOpen} onOpenChange={setDebtModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>💳 Adicionar dívida</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm text-muted-foreground">De quem é a dívida?</label>
+                            <Input
+                                placeholder="Ex: Cartão Nubank, Empréstimo Banco..."
+                                value={debtName}
+                                onChange={(e) => setDebtName(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-muted-foreground">Quanto você paga por mês?</label>
+                            <Input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="R$ 0,00"
+                                value={debtMonthly ? formatInputCurrency(debtMonthly) : ''}
+                                onChange={(e) => setDebtMonthly(e.target.value.replace(/\D/g, ''))}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-muted-foreground">Total da dívida (opcional)</label>
+                            <Input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="R$ 0,00"
+                                value={debtTotal ? formatInputCurrency(debtTotal) : ''}
+                                onChange={(e) => setDebtTotal(e.target.value.replace(/\D/g, ''))}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setDebtModalOpen(false)} className="flex-1">
+                                Cancelar
                             </Button>
-                        )}
-                        <div className="flex-1" />
-                        <Button variant="outline" onClick={() => setEditingItem(null)}>
-                            Cancelar
-                        </Button>
-                        <Button onClick={handleSave} disabled={saving}>
-                            {saving ? 'Salvando...' : 'Salvar'}
-                        </Button>
-                    </DialogFooter>
+                            <Button onClick={saveDebt} className="flex-1 btn-fire" disabled={!debtName || !debtMonthly}>
+                                Adicionar
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

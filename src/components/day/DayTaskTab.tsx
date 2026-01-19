@@ -1,5 +1,5 @@
 import { DayConfig } from '@/config/dayEngine';
-import Day1Wizard from '@/components/day/Day1Wizard';
+import Day1Onboarding from '@/components/day/Day1Onboarding';
 import Day2FinancialMapper from '@/components/day/Day2FinancialMapper';
 import Day3TriggerAnalysis from '@/components/day/Day3TriggerAnalysis';
 import Day4SpendingRules from '@/components/day/Day4SpendingRules';
@@ -38,7 +38,7 @@ export default function DayTaskTab({
         return (
             <div className="animate-in fade-in duration-300">
                 {dayId === 1 && (
-                    <Day1Wizard
+                    <Day1Onboarding
                         onComplete={onComplete}
                         defaultValues={defaultValues}
                     />
