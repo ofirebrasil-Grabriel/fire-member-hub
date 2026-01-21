@@ -33,7 +33,7 @@ interface UserProgressContextType {
   getProgressPercentage: () => number;
   canAccessDay: (dayId: number) => boolean;
   isRewardClaimed: (dayId: number) => boolean;
-  resetProgress: () => void;
+  resetProgress: () => Promise<boolean>;
 }
 
 const defaultProgress: UserProgress = {
@@ -240,36 +240,30 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
     return progress.daysProgress[dayId - 1]?.completed || dayId <= progress.currentDay;
   };
 
-  const resetProgress = () => {
+  const resetProgress = async (): Promise<boolean> => {
     if (!user?.id) {
       setProgress(defaultProgress);
-      return;
+      return true;
     }
 
-    supabase
-      .from('day_progress')
-      .update({
-        completed: false,
-        completed_tasks: [],
-        mood: null,
-        diary_entry: null,
-        completed_at: null,
-        form_data: {} as Json,
-        reward_claimed: false,
-        reward_timestamp: null,
-      })
-      .eq('user_id', user.id)
-      .then(({ error }) => {
-        if (error) {
-          console.error('Erro ao resetar progresso:', error.message);
-          return;
-        }
-        setProgress((prev) => ({
-          ...defaultProgress,
-          userName: prev.userName,
-          startedAt: prev.startedAt,
-        }));
-      });
+    try {
+      const { error } = await supabase.rpc('reset_user_data');
+      if (error) {
+        console.error('Erro ao resetar progresso:', error.message);
+        return false;
+      }
+
+      setProgress((prev) => ({
+        ...defaultProgress,
+        userName: prev.userName,
+        startedAt: new Date().toISOString(),
+      }));
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Erro ao resetar progresso:', message);
+      return false;
+    }
   };
 
   const claimReward = async (dayId: number): Promise<void> => {

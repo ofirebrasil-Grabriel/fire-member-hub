@@ -83,13 +83,21 @@ const Profile = () => {
     });
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (confirm('Tem certeza que deseja resetar todo o progresso? Esta ação não pode ser desfeita.')) {
-      resetProgress();
-      toast({
-        title: "Progresso resetado",
-        description: "Seu progresso foi reiniciado. Boa sorte na nova jornada!",
-      });
+      const success = await resetProgress();
+      if (success) {
+        toast({
+          title: "Progresso resetado",
+          description: "Seu progresso foi reiniciado. Boa sorte na nova jornada!",
+        });
+      } else {
+        toast({
+          title: "Nao foi possivel resetar tudo",
+          description: "Alguns dados nao foram apagados. Tente novamente em instantes.",
+          variant: "destructive",
+        });
+      }
     }
   };
 

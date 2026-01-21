@@ -124,7 +124,6 @@ function generateDay1Analysis(formData: Record<string, unknown>): string {
     const breatheScore = Number(formData.breathe_score) || 5;
     const breatheReason = formData.breathe_reason as string;
     const dailyPeriod = formData.daily_time_period as string;
-    const dailyTime = formData.daily_time_exact as string;
     const minimumStep = formData.minimum_step as string;
 
     let analysis = '';
@@ -170,7 +169,7 @@ function generateDay1Analysis(formData: Record<string, unknown>): string {
 
     // Compromisso
     analysis += '\nSEU COMPROMISSO DIARIO\n\n';
-    analysis += `Horario: ${periodLabels[dailyPeriod] || dailyPeriod} as ${dailyTime}\n`;
+    analysis += `Periodo: ${periodLabels[dailyPeriod] || dailyPeriod}\n`;
     if (minimumStep) {
         analysis += `Passo minimo: ${minimumStep}\n`;
     }

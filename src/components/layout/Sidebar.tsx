@@ -15,7 +15,6 @@ import { useSidebar } from '@/contexts/SidebarContext';
 const menuItems = [
   { icon: Flame, label: 'Desafio', path: '/', adminOnly: false },
   { icon: Trophy, label: 'Conquistas', path: '/conquistas', adminOnly: false },
-  { icon: User, label: 'Perfil', path: '/perfil', adminOnly: false },
   { icon: Settings, label: 'Admin', path: '/admin', adminOnly: true },
 ];
 
@@ -101,10 +100,13 @@ export const Sidebar = () => {
 
       {/* User Info */}
       <div className="p-4 border-t border-sidebar-border">
-        <div className={cn(
-          "flex items-center gap-3",
-          collapsed && "justify-center"
-        )}>
+        <Link
+          to="/perfil"
+          className={cn(
+            "flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-surface-hover",
+            collapsed && "justify-center"
+          )}
+        >
           <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center">
             <User className="w-5 h-5 text-muted-foreground" />
           </div>
@@ -114,7 +116,7 @@ export const Sidebar = () => {
               <p className="text-xs text-muted-foreground">Dia {progress.currentDay} de 15</p>
             </div>
           )}
-        </div>
+        </Link>
       </div>
 
       {/* Collapse Button */}

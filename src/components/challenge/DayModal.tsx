@@ -251,6 +251,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
                     phase={phase}
                     payload={payload}
                     isLoading={saving}
+                    isCompleted={isCompleted}
                   />
                 )}
 
@@ -270,6 +271,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
                         phase={phase}
                         payload={payload}
                         isLoading={saving}
+                        isCompleted={isCompleted}
                       />
                     ) : (
                       <DayCompletedTab

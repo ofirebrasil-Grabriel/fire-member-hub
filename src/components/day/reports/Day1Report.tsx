@@ -71,7 +71,6 @@ export default function Day1Report({
     const breatheReason = formData.breathe_reason as string;
 
     const dailyPeriod = formData.daily_time_period as string;
-    const dailyTime = formData.daily_time_exact as string;
     const reminderEnabled = formData.reminder_enabled as boolean;
     const reminderChannels = (formData.reminder_channels as string[]) || [];
     const minimumStep = formData.minimum_step as string;
@@ -242,15 +241,15 @@ export default function Day1Report({
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Horário */}
+                    {/* Periodo */}
                     <div className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
                         <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                             <Clock className="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Horário escolhido</p>
+                            <p className="text-sm text-muted-foreground">Periodo escolhido</p>
                             <p className="font-bold text-xl">
-                                {periodInfo.emoji} {periodInfo.label} às {dailyTime || '—'}
+                                {periodInfo.emoji} {periodInfo.label}
                             </p>
                         </div>
                     </div>

@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import {
-    ChevronLeft, ChevronRight, Check, Clock, Bell, Smartphone,
+    ChevronLeft, ChevronRight, Check, Bell, Smartphone,
     Mail, MessageSquare, DollarSign, AlertCircle, Target, Sparkles,
     Users, HelpCircle, Heart, Frown, Meh, Smile, PartyPopper
 } from 'lucide-react';
@@ -122,6 +122,12 @@ const BREATHE_LABELS = [
     { min: 9, max: 10, label: 'Tranquilo', color: 'bg-green-600', emoji: '😌' },
 ];
 
+const PERIOD_OPTIONS = [
+    { value: 'morning', label: 'Manhã', icon: '🌅', time: '6h-12h' },
+    { value: 'afternoon', label: 'Tarde', icon: '☀️', time: '12h-18h' },
+    { value: 'night', label: 'Noite', icon: '🌙', time: '18h-24h' },
+];
+
 // Minimum step options
 const MINIMUM_STEPS = [
     { value: 'open_app', label: 'Só abrir o app e ver meu progresso' },
@@ -153,7 +159,6 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
         breathe_reason: '',
         // Step 3: Commitment
         daily_time_period: '',
-        daily_time_exact: '09:00',
         reminder_enabled: true,
         reminder_channels: ['push'],
         minimum_step: '',
@@ -187,7 +192,6 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
             breathe_score: Number(defaultValues.breathe_score ?? 5),
             breathe_reason: String(defaultValues.breathe_reason || ''),
             daily_time_period: String(defaultValues.daily_time_period || ''),
-            daily_time_exact: String(defaultValues.daily_time_exact || '09:00'),
             reminder_enabled: Boolean(
                 defaultValues.reminder_enabled === undefined ? true : defaultValues.reminder_enabled
             ),
@@ -248,7 +252,6 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
     const canProceedThermometer = Boolean(String(formData.breathe_reason || '').trim());
 
     const canProceedCommitment = Boolean(formData.daily_time_period) &&
-        Boolean(formData.daily_time_exact) &&
         (formData.minimum_step !== 'other' ? Boolean(formData.minimum_step) : Boolean(formData.minimum_step_custom));
 
     // Progress
@@ -300,7 +303,7 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
             breathe_reason: formData.breathe_reason,
             // Commitment
             daily_time_period: formData.daily_time_period,
-            daily_time_exact: formData.daily_time_exact,
+            daily_time_exact: null,
             reminder_enabled: formData.reminder_enabled,
             reminder_channels: formData.reminder_channels,
             minimum_step: finalStep,
@@ -507,24 +510,20 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
                     <CardContent className="p-4 text-sm text-muted-foreground flex items-center gap-3">
                         <Target className="h-5 w-5 text-primary" />
                         <span>
-                            Dez minutos por dia ja criam tracao. O importante e ter um horario fixo.
+                            Dez minutos por dia ja criam tracao. O importante e ter um periodo fixo.
                         </span>
                     </CardContent>
                 </Card>
                 <div className="text-center">
                     <h2 className="text-xl font-bold mb-2">Seu Compromisso Diário</h2>
                     <p className="text-muted-foreground text-sm">
-                        Qual o melhor horário para dedicar 10 minutos ao App FIRE?
+                        Qual o melhor periodo para dedicar 10 minutos ao App FIRE?
                     </p>
                 </div>
 
                 {/* Period */}
                 <div className="grid grid-cols-3 gap-3">
-                    {[
-                        { value: 'morning', label: 'Manhã', icon: '🌅', time: '6h-12h' },
-                        { value: 'afternoon', label: 'Tarde', icon: '☀️', time: '12h-18h' },
-                        { value: 'night', label: 'Noite', icon: '🌙', time: '18h-24h' },
-                    ].map(p => (
+                    {PERIOD_OPTIONS.map(p => (
                         <div
                             key={p.value}
                             onClick={() => updateField('daily_time_period', p.value)}
@@ -540,19 +539,6 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
                             <span className="text-xs text-muted-foreground block">{p.time}</span>
                         </div>
                     ))}
-                </div>
-
-                {/* Time picker */}
-                <div className="flex justify-center">
-                    <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-muted-foreground" />
-                        <Input
-                            type="time"
-                            value={formData.daily_time_exact as string}
-                            onChange={e => updateField('daily_time_exact', e.target.value)}
-                            className="w-32 text-center text-xl glass-card"
-                        />
-                    </div>
                 </div>
 
                 {/* Reminder toggle */}
@@ -693,10 +679,10 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
                         </div>
 
                         <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Horário</span>
+                            <span className="text-muted-foreground">Periodo</span>
                             <span className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                {formData.daily_time_exact}
+                                {PERIOD_OPTIONS.find(p => p.value === formData.daily_time_period)?.icon || '⏰'}
+                                {PERIOD_OPTIONS.find(p => p.value === formData.daily_time_period)?.label || '-'}
                             </span>
                         </div>
 
