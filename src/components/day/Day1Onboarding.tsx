@@ -662,7 +662,7 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Termômetro</span>
                             <span className="flex items-center gap-2">
-                                {breatheLabel.emoji} {formData.breathe_score}/10 - {breatheLabel.label}
+                                {breatheLabel.emoji} {String(formData.breathe_score)}/10 - {breatheLabel.label}
                             </span>
                         </div>
 
@@ -688,7 +688,7 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
 
                         <div className="pt-2 border-t">
                             <span className="text-muted-foreground text-sm">Seu objetivo:</span>
-                            <p className="text-sm mt-1 italic">&quot;{formData.main_goal}&quot;</p>
+                            <p className="text-sm mt-1 italic">&quot;{String(formData.main_goal)}&quot;</p>
                         </div>
                     </CardContent>
                 </Card>
