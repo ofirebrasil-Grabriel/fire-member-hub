@@ -164,7 +164,12 @@ const saveDay2Financials = async (userId: string, payload: Record<string, unknow
   const monthlyIncome = toNumber(payload.totalIncome ?? payload.monthly_income);
   const fixedExpenses = (payload.fixedExpenses as Record<string, number>) || {};
   const dailyExpenses = (payload.dailyExpenses as Array<{ label: string; category: string; amount: number }>) || [];
-  const debts = (payload.debts as Array<{ name: string; monthlyPayment: number; totalAmount: number }>) || [];
+  const debts = (payload.debts as Array<{
+    name: string;
+    monthlyPayment: number;
+    totalAmount: number;
+    installmentsRemaining?: number;
+  }>) || [];
 
   // Income: replace "Renda principal"
   const { error: incomeDeleteError } = await supabase
@@ -192,7 +197,6 @@ const saveDay2Financials = async (userId: string, payload: Record<string, unknow
     water: 'Agua',
     internet: 'Internet',
     phone: 'Celular',
-    transport: 'Transporte',
     health: 'Saude/Plano',
     education: 'Educacao',
   };
@@ -202,7 +206,6 @@ const saveDay2Financials = async (userId: string, payload: Record<string, unknow
     water: 'utilities',
     internet: 'utilities',
     phone: 'utilities',
-    transport: 'transport',
     health: 'health',
     education: 'education',
   };
@@ -217,6 +220,14 @@ const saveDay2Financials = async (userId: string, payload: Record<string, unknow
 
     if (fixedDeleteError) throw fixedDeleteError;
   }
+
+  const { error: transportDeleteError } = await supabase
+    .from('fixed_expenses')
+    .delete()
+    .eq('user_id', userId)
+    .eq('name', 'Transporte');
+
+  if (transportDeleteError) throw transportDeleteError;
 
   const fixedRows = Object.entries(fixedExpenses)
     .filter(([, amount]) => amount > 0)
@@ -291,7 +302,8 @@ const saveDay2Financials = async (userId: string, payload: Record<string, unknow
       user_id: userId,
       creditor: item.name,
       installment_value: item.monthlyPayment,
-      total_balance: item.totalAmount || item.monthlyPayment * 12,
+      total_balance: item.totalAmount || null,
+      installments_remaining: item.installmentsRemaining || null,
       status: 'pending',
       is_critical: false,
     }));

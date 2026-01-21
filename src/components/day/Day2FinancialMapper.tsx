@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowRight, ArrowLeft, Plus, X, Check, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -28,12 +28,11 @@ const STEPS: Step[] = ['income', 'fixed', 'daily', 'debts', 'summary'];
 
 // Categorias de contas fixas com emojis amigáveis
 const FIXED_CATEGORIES = [
-    { id: 'housing', emoji: '🏠', label: 'Casa/Aluguel' },
+    { id: 'housing', emoji: '🏠', label: 'Casa(Aluguel)' },
     { id: 'electricity', emoji: '💡', label: 'Luz' },
     { id: 'water', emoji: '💧', label: 'Água' },
     { id: 'internet', emoji: '🌐', label: 'Internet' },
     { id: 'phone', emoji: '📱', label: 'Celular' },
-    { id: 'transport', emoji: '🚗', label: 'Transporte' },
     { id: 'health', emoji: '🏥', label: 'Saúde/Plano' },
     { id: 'education', emoji: '📚', label: 'Educação' },
 ];
@@ -63,6 +62,7 @@ interface DebtItem {
     name: string;
     monthlyPayment: number;
     totalAmount: number;
+    installmentsRemaining?: number;
 }
 
 const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, defaultValues }) => {
@@ -73,6 +73,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
 
     // Estado principal
     const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
+    const [monthlyIncomeText, setMonthlyIncomeText] = useState('');
     const [fixedExpenses, setFixedExpenses] = useState<Record<string, number>>({});
     const [dailyExpenses, setDailyExpenses] = useState<ExpenseItem[]>([]);
     const [debts, setDebts] = useState<DebtItem[]>([]);
@@ -91,7 +92,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
     const [debtModalOpen, setDebtModalOpen] = useState(false);
     const [debtName, setDebtName] = useState('');
     const [debtMonthly, setDebtMonthly] = useState('');
-    const [debtTotal, setDebtTotal] = useState('');
+    const [debtInstallments, setDebtInstallments] = useState('');
 
     // Cálculos
     const totalFixed = useMemo(() =>
@@ -125,23 +126,23 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
     const stepMessageMap: Record<Step, { title: string; message: string }> = {
         income: {
             title: 'Tudo começa pela renda real',
-            message: 'Sem julgamento. O foco e entender a foto completa para decidir com clareza.',
+            message: 'Use sua renda media mensal. Se varia, faca a media dos ultimos 3 meses e inclua tudo que entra.',
         },
         fixed: {
             title: 'Contas fixas dão previsibilidade',
-            message: 'Liste o que vence todo mes. Isso evita sustos e juros.',
+            message: 'Aqui entram despesas fixas mensais (moradia, luz, agua, internet, escola). Nao inclua dividas.',
         },
         daily: {
             title: 'Gastos diarios mostram vazamentos',
-            message: 'Nao precisa ser perfeito. Uma estimativa honesta ja ajuda muito.',
+            message: 'Gastos variaveis do dia a dia. Use uma media mensal aproximada. Nao inclua contas fixas.',
         },
         debts: {
             title: 'Dividas mapeadas = pressao menor',
-            message: 'Aqui voce tira o peso do segredo e ganha controle.',
+            message: 'Parcelas de cartao, emprestimos e financiamentos. Informe o valor mensal e, se souber, o total.',
         },
         summary: {
             title: 'Seu raio-x esta pronto',
-            message: 'Agora temos base para agir. Sem culpa, com estrategia.',
+            message: 'Revise os numeros. Isso vira a base das proximas decisoes do desafio.',
         },
     };
 
@@ -166,8 +167,13 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
             try {
                 if (defaultValues && Object.keys(defaultValues).length > 0) {
                     const storedDebts = (defaultValues.debts as DebtItem[]) || [];
-                    setMonthlyIncome(Number(defaultValues.totalIncome ?? defaultValues.monthly_income ?? 0));
-                    setFixedExpenses((defaultValues.fixedExpenses as Record<string, number>) || {});
+                    const storedMonthlyIncome = Number(defaultValues.totalIncome ?? defaultValues.monthly_income ?? 0);
+                    setMonthlyIncome(storedMonthlyIncome);
+                    setMonthlyIncomeText(storedMonthlyIncome > 0 ? String(storedMonthlyIncome) : '');
+                    const storedFixed = (defaultValues.fixedExpenses as Record<string, number>) || {};
+                    const sanitizedFixed = { ...storedFixed };
+                    delete sanitizedFixed.transport;
+                    setFixedExpenses(sanitizedFixed);
                     setDailyExpenses((defaultValues.dailyExpenses as ExpenseItem[]) || []);
                     setDebts(storedDebts);
                     setHasDebts(storedDebts.length > 0 ? true : null);
@@ -211,8 +217,11 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
 
                 if (monthlyFromItems > 0) {
                     setMonthlyIncome(monthlyFromItems);
+                    setMonthlyIncomeText(String(monthlyFromItems));
                 } else if (assessmentResult.data?.monthly_income) {
-                    setMonthlyIncome(Number(assessmentResult.data.monthly_income));
+                    const income = Number(assessmentResult.data.monthly_income);
+                    setMonthlyIncome(income);
+                    setMonthlyIncomeText(income > 0 ? String(income) : '');
                 }
 
                 const fixedByLabel = FIXED_CATEGORIES.reduce<Record<string, string>>((acc, item) => {
@@ -221,7 +230,6 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                 }, {});
                 const fixedByCategory: Record<string, string> = {
                     housing: 'housing',
-                    transport: 'transport',
                     education: 'education',
                     health: 'health',
                 };
@@ -287,6 +295,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                     name: item.creditor || 'Divida',
                     monthlyPayment: Number(item.installment_value) || 0,
                     totalAmount: Number(item.total_balance) || 0,
+                    installmentsRemaining: item.installments_remaining ?? undefined,
                 }));
                 if (debtLoaded.length > 0) {
                     setDebts(debtLoaded);
@@ -340,7 +349,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
 
     const saveFixedExpense = () => {
         if (fixedModalCategory) {
-            const value = parseFloat(fixedModalValue.replace(/\D/g, '')) / 100 || 0;
+            const value = parseCurrencyInput(fixedModalValue);
             setFixedExpenses(prev => ({
                 ...prev,
                 [fixedModalCategory.id]: value
@@ -367,7 +376,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
 
     const saveDailyExpense = () => {
         if (dailyModalCategory) {
-            const value = parseFloat(dailyModalValue.replace(/\D/g, '')) / 100 || 0;
+            const value = parseCurrencyInput(dailyModalValue);
             if (value > 0) {
                 setDailyExpenses(prev => [...prev, {
                     id: Date.now().toString(),
@@ -389,20 +398,24 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
 
     // Handlers de dívidas
     const saveDebt = () => {
-        const monthly = parseFloat(debtMonthly.replace(/\D/g, '')) / 100 || 0;
-        const total = parseFloat(debtTotal.replace(/\D/g, '')) / 100 || 0;
+        const monthly = parseCurrencyInput(debtMonthly);
+        const installmentsRaw = debtInstallments.replace(/\D/g, '');
+        const installments = installmentsRaw ? Number(installmentsRaw) : 0;
+        const installmentsRemaining = installments > 0 ? installments : undefined;
+        const total = installmentsRemaining ? monthly * installmentsRemaining : 0;
 
         if (debtName && monthly > 0) {
             setDebts(prev => [...prev, {
                 id: Date.now().toString(),
                 name: debtName,
                 monthlyPayment: monthly,
-                totalAmount: total || monthly * 12
+                totalAmount: total,
+                installmentsRemaining,
             }]);
             setDebtModalOpen(false);
             setDebtName('');
             setDebtMonthly('');
-            setDebtTotal('');
+            setDebtInstallments('');
         }
     };
 
@@ -411,11 +424,27 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
     };
 
     // Input de moeda
-    const formatInputCurrency = (value: string) => {
-        const numbers = value.replace(/\D/g, '');
-        const amount = parseInt(numbers || '0') / 100;
-        return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const parseCurrencyInput = (value: string) => {
+        const cleaned = value.replace(/[^\d,.-]/g, '');
+        if (!cleaned) {
+            return 0;
+        }
+        let normalized = cleaned;
+        if (cleaned.includes(',')) {
+            normalized = cleaned.replace(/\./g, '').replace(',', '.');
+        } else if (cleaned.includes('.')) {
+            const parts = cleaned.split('.');
+            if (parts.length === 2 && parts[1].length <= 2) {
+                normalized = cleaned;
+            } else {
+                normalized = cleaned.replace(/\./g, '');
+            }
+        }
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
     };
+
+    const sanitizeCurrencyText = (value: string) => value.replace(/[^\d,]/g, '');
 
     // Salvar e concluir
     const handleComplete = async () => {
@@ -497,20 +526,22 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                                 <span className="text-4xl">💰</span>
                                 <h2 className="text-xl font-bold">Quanto você ganha por mês?</h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Inclua salário, freelas, pensão... tudo que entra
+                                    Use sua renda média mensal. Se varia, faça a média dos últimos 3 meses e inclua
+                                    salário, freelas, pensão e qualquer extra.
                                 </p>
                             </div>
 
                             <div className="max-w-xs mx-auto">
                                 <Input
                                     type="text"
-                                    inputMode="numeric"
+                                    inputMode="decimal"
                                     className="text-center text-2xl font-bold h-16 bg-white/5"
                                     placeholder="R$ 0,00"
-                                    value={monthlyIncome > 0 ? formatCurrency(monthlyIncome) : ''}
+                                    value={monthlyIncomeText}
                                     onChange={(e) => {
-                                        const value = parseFloat(e.target.value.replace(/\D/g, '')) / 100 || 0;
-                                        setMonthlyIncome(value);
+                                        const nextValue = sanitizeCurrencyText(e.target.value);
+                                        setMonthlyIncomeText(nextValue);
+                                        setMonthlyIncome(parseCurrencyInput(nextValue));
                                     }}
                                 />
                             </div>
@@ -534,7 +565,8 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                                 <span className="text-4xl">🏠</span>
                                 <h2 className="text-xl font-bold">Contas que você paga todo mês</h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Toque em cada item para adicionar o valor
+                                    Aqui entram despesas fixas mensais (moradia, luz, água, internet, escola, plano).
+                                    Não inclua dívidas, financiamentos ou empréstimos.
                                 </p>
                             </div>
 
@@ -589,7 +621,8 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                                 <span className="text-4xl">🛒</span>
                                 <h2 className="text-xl font-bold">Gastos do dia a dia</h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Mercado, restaurantes, uber... quanto você gasta por mês?
+                                    Gastos variáveis que mudam todo mês (mercado, refeições, transporte).
+                                    Use uma média mensal aproximada e não inclua contas fixas.
                                 </p>
                             </div>
 
@@ -645,7 +678,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
 
                             {dailyExpenses.length === 0 && (
                                 <p className="text-center text-sm text-muted-foreground">
-                                    💡 Não precisa ser exato. Coloque uma estimativa.
+                                    💡 Não precisa ser exato. Uma estimativa honesta já é suficiente.
                                 </p>
                             )}
                         </div>
@@ -658,7 +691,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                                 <span className="text-4xl">💳</span>
                                 <h2 className="text-xl font-bold">Você está devendo algo?</h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Cartão, empréstimo, financiamento...
+                                    Cartão, empréstimo, financiamento. Informe a parcela mensal e quantas parcelas faltam.
                                 </p>
                             </div>
 
@@ -701,6 +734,11 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                                                     <p className="text-sm text-muted-foreground">
                                                         Parcela: {formatCurrency(debt.monthlyPayment)}/mês
                                                     </p>
+                                                    {debt.installmentsRemaining && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Parcelas restantes: {debt.installmentsRemaining}
+                                                        </p>
+                                                    )}
                                                     {debt.totalAmount > 0 && (
                                                         <p className="text-xs text-red-400">
                                                             Total: {formatCurrency(debt.totalAmount)}
@@ -921,15 +959,20 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                             <span className="text-2xl">{fixedModalCategory?.emoji}</span>
                             Quanto você paga de {fixedModalCategory?.label.toLowerCase()}?
                         </DialogTitle>
+                        <DialogDescription>
+                            {fixedModalCategory?.id === 'housing'
+                                ? 'O valor referente a moradia. Se nao paga, deixe zero. Se nao souber, coloque um valor aproximado.'
+                                : 'Informe o valor mensal referente a essa conta. Se nao paga, deixe zero. Se nao souber, coloque um valor aproximado.'}
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <Input
                             type="text"
-                            inputMode="numeric"
+                            inputMode="decimal"
                             className="text-center text-xl font-bold h-14"
                             placeholder="R$ 0,00"
-                            value={fixedModalValue ? formatInputCurrency(fixedModalValue) : ''}
-                            onChange={(e) => setFixedModalValue(e.target.value.replace(/\D/g, ''))}
+                            value={fixedModalValue}
+                            onChange={(e) => setFixedModalValue(sanitizeCurrencyText(e.target.value))}
                             autoFocus
                         />
                         <div className="flex gap-2">
@@ -988,11 +1031,11 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                                 </p>
                                 <Input
                                     type="text"
-                                    inputMode="numeric"
+                                    inputMode="decimal"
                                     className="text-center text-xl font-bold h-14"
                                     placeholder="R$ 0,00"
-                                    value={dailyModalValue ? formatInputCurrency(dailyModalValue) : ''}
-                                    onChange={(e) => setDailyModalValue(e.target.value.replace(/\D/g, ''))}
+                                    value={dailyModalValue}
+                                    onChange={(e) => setDailyModalValue(sanitizeCurrencyText(e.target.value))}
                                     autoFocus
                                 />
                                 <div className="flex gap-2">
@@ -1028,20 +1071,23 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                             <label className="text-sm text-muted-foreground">Quanto você paga por mês?</label>
                             <Input
                                 type="text"
-                                inputMode="numeric"
+                                inputMode="decimal"
                                 placeholder="R$ 0,00"
-                                value={debtMonthly ? formatInputCurrency(debtMonthly) : ''}
-                                onChange={(e) => setDebtMonthly(e.target.value.replace(/\D/g, ''))}
+                                value={debtMonthly}
+                                onChange={(e) => setDebtMonthly(sanitizeCurrencyText(e.target.value))}
                             />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Digite apenas o valor mensal. Pode usar vírgula para centavos.
+                            </p>
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">Total da dívida (opcional)</label>
+                            <label className="text-sm text-muted-foreground">Quantas parcelas faltam? (opcional)</label>
                             <Input
                                 type="text"
                                 inputMode="numeric"
-                                placeholder="R$ 0,00"
-                                value={debtTotal ? formatInputCurrency(debtTotal) : ''}
-                                onChange={(e) => setDebtTotal(e.target.value.replace(/\D/g, ''))}
+                                placeholder="Ex: 12"
+                                value={debtInstallments}
+                                onChange={(e) => setDebtInstallments(e.target.value.replace(/\D/g, ''))}
                             />
                         </div>
                         <div className="flex gap-2">

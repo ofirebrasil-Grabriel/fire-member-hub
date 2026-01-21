@@ -62,7 +62,7 @@ export default function Day2Report({
         if (balance > 0) {
             const percentage = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
             if (percentage >= 20) return { type: 'positive', label: 'Saudável', icon: '✅' };
-            return { type: 'warning', label: 'Marginal', icon: '⚠️' };
+            return { type: 'warning', label: 'Margem', icon: '⚠️' };
         }
         return { type: 'negative', label: 'Déficit', icon: '🚨' };
     }, [balance, totalIncome]);
@@ -111,6 +111,22 @@ export default function Day2Report({
                     })}
                 </p>
             </div>
+
+            <Card className="glass-card border-amber-400/50 bg-amber-500/15 shadow-lg shadow-amber-500/10">
+                <CardContent className="pt-5 text-sm text-amber-50 leading-relaxed">
+                    <p className="text-base font-semibold text-amber-100 mb-2">
+                        Antes de olhar os números, respire. Isso aqui é sobre coragem.
+                    </p>
+                    <p>
+                        Você deu um passo extremamente importante e foi corajoso em fazer isso. Fique tranquilo:
+                        sua situação atual é reversível e vamos construir um plano claro para mudar nos próximos dias.
+                    </p>
+                </CardContent>
+            </Card>
+
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Visão geral
+            </p>
 
             {/* Card de Visão Geral */}
             <Card className="glass-card border-primary/10 overflow-hidden">
