@@ -159,6 +159,7 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
         breathe_reason: '',
         // Step 3: Commitment
         daily_time_period: '',
+        daily_time_exact: '09:00',
         reminder_enabled: true,
         reminder_channels: ['push'],
         minimum_step: '',
@@ -192,6 +193,7 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
             breathe_score: Number(defaultValues.breathe_score ?? 5),
             breathe_reason: String(defaultValues.breathe_reason || ''),
             daily_time_period: String(defaultValues.daily_time_period || ''),
+            daily_time_exact: String(defaultValues.daily_time_exact || '09:00'),
             reminder_enabled: Boolean(
                 defaultValues.reminder_enabled === undefined ? true : defaultValues.reminder_enabled
             ),
@@ -303,7 +305,7 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValu
             breathe_reason: formData.breathe_reason,
             // Commitment
             daily_time_period: formData.daily_time_period,
-            daily_time_exact: null,
+            daily_time_exact: formData.daily_time_exact || '09:00',
             reminder_enabled: formData.reminder_enabled,
             reminder_channels: formData.reminder_channels,
             minimum_step: finalStep,

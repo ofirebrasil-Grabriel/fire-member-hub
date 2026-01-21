@@ -99,8 +99,8 @@ const ChallengePath = () => {
 
   return (
     <Layout>
-      <div className="max-h-96 mx-auto max-w-[calc(80vw-0px)] px-0 md:px-2 space-y-8">
-        <div className="relative w-full overflow-hidden rounded-3xl border border-border/60 bg-surface/60 px-6 py-7 md:px-8">
+      <div className="max-h-96 mx-auto max-w-[calc(80vw-0px)] px-auto md:px-2 space-y-8">
+        <div className="relative w-full overflow-hidden rounded-3xl border border-border/60 bg-surface/60 px-2 py-7 md:px-8">
           <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gradient-glass opacity-30 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-10 h-72 w-72 rounded-full bg-surface/70 blur-3xl" />
           <div className="relative items-end grid gap-6 xl:grid-cols-[1.3fr_0.7fr] lg:max-w-[calc(80vw-0px)]">

@@ -147,7 +147,7 @@ const saveUserCommitment = async (userId: string, payload: Record<string, unknow
   const commitment = {
     user_id: userId,
     daily_time_period: String(payload.daily_time_period || ''),
-    daily_time_exact: payload.daily_time_exact ? String(payload.daily_time_exact) : null,
+    daily_time_exact: String(payload.daily_time_exact || '09:00'),
     reminder_enabled: Boolean(payload.reminder_enabled),
     reminder_channels: Array.isArray(payload.reminder_channels) ? payload.reminder_channels : [],
     minimum_step: String(payload.minimum_step || ''),
