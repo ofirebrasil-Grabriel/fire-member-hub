@@ -7,7 +7,7 @@ import { UserProgressProvider } from "@/contexts/UserProgressContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
-import DayPage from "./pages/DayPage";
+import DayRedirect from "./pages/DayRedirect";
 import ChallengePath from "./pages/ChallengePath";
 import Library from "./pages/Library";
 import Profile from "./pages/Profile";
@@ -69,7 +69,7 @@ const AppRoutes = () => (
     <Route path="/" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
     <Route path="/app" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
     <Route path="/desafio" element={<ProtectedRoute><ChallengePath /></ProtectedRoute>} />
-    <Route path="/dia/:id" element={<ProtectedRoute><DayPage /></ProtectedRoute>} />
+    <Route path="/dia/:id" element={<ProtectedRoute><DayRedirect /></ProtectedRoute>} />
     <Route path="/biblioteca" element={<ProtectedRoute><Library /></ProtectedRoute>} />
     <Route path="/recursos" element={<Navigate to="/biblioteca" replace />} />
     <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

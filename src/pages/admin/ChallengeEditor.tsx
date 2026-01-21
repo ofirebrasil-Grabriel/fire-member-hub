@@ -258,6 +258,34 @@ export const ChallengeEditor = () => {
     }
   };
 
+  const getStoragePath = (url: string) => {
+    const marker = '/storage/v1/object/public/';
+    const index = url.indexOf(marker);
+    if (index === -1) return null;
+    const path = url.slice(index + marker.length);
+    const [bucket, ...parts] = path.split('/');
+    if (!bucket || parts.length === 0) return null;
+    return { bucket, path: parts.join('/') };
+  };
+
+  const handleRemoveAudio = async (field: 'morning_audio_url' | 'concept_audio_url') => {
+    if (!day) return;
+    const url = day[field];
+    if (url) {
+      const storagePath = getStoragePath(url);
+      if (storagePath) {
+        const { error } = await supabase.storage
+          .from(storagePath.bucket)
+          .remove([storagePath.path]);
+        if (error) {
+          toast({ title: 'Erro ao remover arquivo', description: error.message, variant: 'destructive' });
+        }
+      }
+    }
+    handleChange(field, null);
+    toast({ title: 'Áudio removido' });
+  };
+
   const handleSave = async () => {
     if (!day) return;
     setSaving(true);
@@ -380,19 +408,39 @@ export const ChallengeEditor = () => {
 
           {/* Morning Message */}
           <section className="glass-card p-6 space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-2">
               <h2 className="text-xl font-bold">Mensagem Matinal</h2>
-              <label className="cursor-pointer flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 bg-primary/10 px-3 py-1.5 rounded">
-                {uploading === 'morning_audio_url' ? <Loader2 size={14} className="animate-spin" /> : <Mic size={14} />}
-                {uploading === 'morning_audio_url' ? 'Enviando...' : 'Upload Áudio'}
-                <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, 'morning_audio_url')} />
-              </label>
+              <div className="flex items-center gap-2">
+                {day.morning_audio_url && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRemoveAudio('morning_audio_url')}
+                    className="gap-1"
+                  >
+                    <Trash2 size={14} /> Remover áudio
+                  </Button>
+                )}
+                <label className="cursor-pointer flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 bg-primary/10 px-3 py-1.5 rounded">
+                  {uploading === 'morning_audio_url' ? <Loader2 size={14} className="animate-spin" /> : <Mic size={14} />}
+                  {uploading === 'morning_audio_url' ? 'Enviando...' : 'Upload Áudio'}
+                  <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, 'morning_audio_url')} />
+                </label>
+              </div>
             </div>
             {day.morning_audio_url && (
-              <div className="text-xs text-success flex items-center gap-1">
-                <Headphones size={12} /> Áudio vinculado
+              <div className="space-y-2">
+                <div className="text-xs text-success flex items-center gap-1">
+                  <Headphones size={12} /> Áudio vinculado
+                </div>
+                <audio controls src={day.morning_audio_url} className="w-full" />
               </div>
             )}
+            <Input
+              value={day.morning_audio_url || ''}
+              onChange={(e) => handleChange('morning_audio_url', e.target.value)}
+              placeholder="URL do áudio (opcional)"
+            />
             <Textarea
               value={day.morning_message || ''}
               onChange={(e) => handleChange('morning_message', e.target.value)}
@@ -403,19 +451,39 @@ export const ChallengeEditor = () => {
 
           {/* Fire Concept */}
           <section className="glass-card p-6 space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-2">
               <h2 className="text-xl font-bold">Conceito FIRE</h2>
-              <label className="cursor-pointer flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 bg-primary/10 px-3 py-1.5 rounded">
-                {uploading === 'concept_audio_url' ? <Loader2 size={14} className="animate-spin" /> : <Mic size={14} />}
-                {uploading === 'concept_audio_url' ? 'Enviando...' : 'Upload Áudio'}
-                <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, 'concept_audio_url')} />
-              </label>
+              <div className="flex items-center gap-2">
+                {day.concept_audio_url && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRemoveAudio('concept_audio_url')}
+                    className="gap-1"
+                  >
+                    <Trash2 size={14} /> Remover áudio
+                  </Button>
+                )}
+                <label className="cursor-pointer flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 bg-primary/10 px-3 py-1.5 rounded">
+                  {uploading === 'concept_audio_url' ? <Loader2 size={14} className="animate-spin" /> : <Mic size={14} />}
+                  {uploading === 'concept_audio_url' ? 'Enviando...' : 'Upload Áudio'}
+                  <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, 'concept_audio_url')} />
+                </label>
+              </div>
             </div>
             {day.concept_audio_url && (
-              <div className="text-xs text-success flex items-center gap-1">
-                <Headphones size={12} /> Áudio vinculado
+              <div className="space-y-2">
+                <div className="text-xs text-success flex items-center gap-1">
+                  <Headphones size={12} /> Áudio vinculado
+                </div>
+                <audio controls src={day.concept_audio_url} className="w-full" />
               </div>
             )}
+            <Input
+              value={day.concept_audio_url || ''}
+              onChange={(e) => handleChange('concept_audio_url', e.target.value)}
+              placeholder="URL do áudio (opcional)"
+            />
             <Input
               value={day.concept_title || ''}
               onChange={(e) => handleChange('concept_title', e.target.value)}

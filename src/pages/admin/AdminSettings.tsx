@@ -23,10 +23,26 @@ export const AdminSettings = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingSetting, setEditingSetting] = useState<Setting | null>(null);
   const [formData, setFormData] = useState({ key: '', value: '', description: '' });
+  const [aiBudgetInput, setAiBudgetInput] = useState('');
+
+  const aiBudgetSetting = settings.find((setting) => setting.key === 'ai_budget_brl');
 
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    if (!aiBudgetSetting) {
+      setAiBudgetInput('');
+      return;
+    }
+    const value = typeof aiBudgetSetting.value === 'number'
+      ? String(aiBudgetSetting.value)
+      : typeof aiBudgetSetting.value === 'string'
+        ? aiBudgetSetting.value
+        : JSON.stringify(aiBudgetSetting.value);
+    setAiBudgetInput(value);
+  }, [aiBudgetSetting]);
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -113,6 +129,40 @@ export const AdminSettings = () => {
     }
   };
 
+  const handleSaveAiBudget = async () => {
+    const normalized = aiBudgetInput.replace(',', '.');
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      toast({ title: 'Informe um valor valido em R$', variant: 'destructive' });
+      return;
+    }
+
+    const description = 'Limite global de gasto com IA (R$)';
+    if (aiBudgetSetting) {
+      const { error } = await supabase
+        .from('settings')
+        .update({ value: parsed, description, updated_at: new Date().toISOString() })
+        .eq('id', aiBudgetSetting.id);
+
+      if (error) {
+        toast({ title: 'Erro ao salvar limite', variant: 'destructive' });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from('settings')
+        .insert({ key: 'ai_budget_brl', value: parsed, description });
+
+      if (error) {
+        toast({ title: 'Erro ao criar limite', variant: 'destructive' });
+        return;
+      }
+    }
+
+    toast({ title: 'Limite de IA atualizado!' });
+    fetchSettings();
+  };
+
   const hotmartWebhookUrl = 'https://gvjvygukvupjxadevduj.supabase.co/functions/v1/hotmart-webhook';
   const n8nWebhookUrl = 'https://gvjvygukvupjxadevduj.supabase.co/functions/v1/n8n-webhook';
 
@@ -176,6 +226,35 @@ export const AdminSettings = () => {
             <p className="text-xs text-muted-foreground">
               Eventos: send_welcome_email, send_milestone_email, get_user_progress, get_milestone_users
             </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-warning" />
+              Limite global de IA
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Define o teto mensal em R$ para uso de IA (Google/OpenAI).
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              value={aiBudgetInput}
+              onChange={(e) => setAiBudgetInput(e.target.value)}
+              placeholder="0"
+              className="w-32"
+            />
+            <Button onClick={handleSaveAiBudget} className="gap-2">
+              <Save className="w-4 h-4" />
+              Salvar
+            </Button>
           </div>
         </div>
       </div>

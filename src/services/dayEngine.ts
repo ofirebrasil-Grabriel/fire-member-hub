@@ -38,6 +38,8 @@ const getMonthYear = (date = new Date()) => {
   return `${year}-${month}`;
 };
 
+const getIsoDate = (date = new Date()) => date.toISOString().slice(0, 10);
+
 const getDayOfWeekLabel = (value: number | null) => {
   const labels = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
   if (value === null || value === undefined || value < 0 || value > 6) return '-';
@@ -88,13 +90,342 @@ const saveUserProfile = async (userId: string, payload: Record<string, unknown>)
   }
 };
 
+const saveInitialAssessment = async (userId: string, payload: Record<string, unknown>) => {
+  const assessment = {
+    user_id: userId,
+    money_feeling: String(payload.money_feeling || ''),
+    has_overdue_bills: String(payload.has_overdue_bills || ''),
+    monthly_income: toNumber(payload.monthly_income),
+    top_expenses: Array.isArray(payload.top_expenses) ? payload.top_expenses : [],
+    shares_finances: Boolean(payload.shares_finances),
+    shares_with: payload.shares_with ? String(payload.shares_with) : null,
+    biggest_blocker: String(payload.biggest_blocker || ''),
+    main_goal: String(payload.main_goal || ''),
+    tried_before: Boolean(payload.tried_before),
+    what_blocked: payload.what_blocked ? String(payload.what_blocked) : null,
+  };
+
+  const { error } = await supabase
+    .from('initial_assessment')
+    .upsert(assessment, { onConflict: 'user_id' });
+
+  if (error) {
+    const message = String((error as { message?: string }).message || '');
+    if (message.includes('404') || message.includes('spending_rules')) {
+      throw new Error(
+        'Tabela spending_rules nao existe no Supabase. Rode a migration 20260202093000_create_spending_rules.sql.'
+      );
+    }
+    throw error;
+  }
+};
+
+const saveDailyLog = async (userId: string, dayNumber: number, payload: Record<string, unknown>) => {
+  const breatheScore = toNumber(payload.breathe_score);
+  const breatheReason = String(payload.breathe_reason || '').trim();
+
+  if (!breatheReason) return;
+
+  const { error } = await supabase
+    .from('daily_log')
+    .upsert(
+      {
+        user_id: userId,
+        day_number: dayNumber,
+        breathe_score: breatheScore,
+        breathe_reason: breatheReason,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,day_number' }
+    );
+
+  if (error) throw error;
+};
+
+const saveUserCommitment = async (userId: string, payload: Record<string, unknown>) => {
+  const commitment = {
+    user_id: userId,
+    daily_time_period: String(payload.daily_time_period || ''),
+    daily_time_exact: String(payload.daily_time_exact || ''),
+    reminder_enabled: Boolean(payload.reminder_enabled),
+    reminder_channels: Array.isArray(payload.reminder_channels) ? payload.reminder_channels : [],
+    minimum_step: String(payload.minimum_step || ''),
+  };
+
+  const { error } = await supabase
+    .from('user_commitment')
+    .upsert(commitment, { onConflict: 'user_id' });
+
+  if (error) throw error;
+};
+
+const saveDay2Financials = async (userId: string, payload: Record<string, unknown>) => {
+  const monthlyIncome = toNumber(payload.totalIncome ?? payload.monthly_income);
+  const fixedExpenses = (payload.fixedExpenses as Record<string, number>) || {};
+  const dailyExpenses = (payload.dailyExpenses as Array<{ label: string; category: string; amount: number }>) || [];
+  const debts = (payload.debts as Array<{ name: string; monthlyPayment: number; totalAmount: number }>) || [];
+
+  // Income: replace "Renda principal"
+  const { error: incomeDeleteError } = await supabase
+    .from('income_items')
+    .delete()
+    .eq('user_id', userId)
+    .eq('source', 'Renda principal');
+
+  if (incomeDeleteError) throw incomeDeleteError;
+
+  if (monthlyIncome > 0) {
+    const { error } = await supabase.from('income_items').insert({
+      user_id: userId,
+      source: 'Renda principal',
+      amount: monthlyIncome,
+      recurrence: 'monthly',
+    });
+    if (error) throw error;
+  }
+
+  // Fixed expenses: replace by name
+  const fixedLabels: Record<string, string> = {
+    housing: 'Casa/Aluguel',
+    electricity: 'Luz',
+    water: 'Agua',
+    internet: 'Internet',
+    phone: 'Celular',
+    transport: 'Transporte',
+    health: 'Saude/Plano',
+    education: 'Educacao',
+  };
+  const fixedCategoryMap: Record<string, string> = {
+    housing: 'housing',
+    electricity: 'utilities',
+    water: 'utilities',
+    internet: 'utilities',
+    phone: 'utilities',
+    transport: 'transport',
+    health: 'health',
+    education: 'education',
+  };
+
+  const fixedNames = Object.keys(fixedExpenses).map((key) => fixedLabels[key] || key);
+  if (fixedNames.length > 0) {
+    const { error: fixedDeleteError } = await supabase
+      .from('fixed_expenses')
+      .delete()
+      .eq('user_id', userId)
+      .in('name', fixedNames);
+
+    if (fixedDeleteError) throw fixedDeleteError;
+  }
+
+  const fixedRows = Object.entries(fixedExpenses)
+    .filter(([, amount]) => amount > 0)
+    .map(([key, amount]) => ({
+      user_id: userId,
+      name: fixedLabels[key] || key,
+      category: fixedCategoryMap[key] || 'other',
+      amount,
+      priority: 'essential',
+    }));
+
+  if (fixedRows.length > 0) {
+    const { error } = await supabase.from('fixed_expenses').insert(fixedRows);
+    if (error) throw error;
+  }
+
+  // Variable expenses: replace by name
+  const variableCategoryMap: Record<string, string> = {
+    market: 'food',
+    food: 'food',
+    transport: 'transport',
+    pharmacy: 'health',
+    clothing: 'shopping',
+    leisure: 'leisure',
+    subscriptions: 'other',
+    other: 'other',
+  };
+
+  const variableNames = dailyExpenses.map((item) => item.label);
+  if (variableNames.length > 0) {
+    const { error: variableDeleteError } = await supabase
+      .from('variable_expenses')
+      .delete()
+      .eq('user_id', userId)
+      .in('name', variableNames);
+
+    if (variableDeleteError) throw variableDeleteError;
+  }
+
+  const spentOn = getIsoDate();
+  const variableRows = dailyExpenses
+    .filter((item) => item.amount > 0)
+    .map((item) => ({
+      user_id: userId,
+      name: item.label,
+      category: variableCategoryMap[item.category] || 'other',
+      amount: item.amount,
+      spent_on: spentOn,
+      is_essential: ['market', 'food', 'transport', 'pharmacy'].includes(item.category),
+    }));
+
+  if (variableRows.length > 0) {
+    const { error } = await supabase.from('variable_expenses').insert(variableRows);
+    if (error) throw error;
+  }
+
+  // Debts: replace by creditor
+  const debtNames = debts.map((item) => item.name);
+  if (debtNames.length > 0) {
+    const { error: debtDeleteError } = await supabase
+      .from('debts')
+      .delete()
+      .eq('user_id', userId)
+      .in('creditor', debtNames);
+
+    if (debtDeleteError) throw debtDeleteError;
+  }
+
+  const debtRows = debts
+    .filter((item) => item.monthlyPayment > 0)
+    .map((item) => ({
+      user_id: userId,
+      creditor: item.name,
+      installment_value: item.monthlyPayment,
+      total_balance: item.totalAmount || item.monthlyPayment * 12,
+      status: 'pending',
+      is_critical: false,
+    }));
+
+  if (debtRows.length > 0) {
+    const { error } = await supabase.from('debts').insert(debtRows);
+    if (error) throw error;
+  }
+
+  const snapshot = {
+    user_id: userId,
+    total_income: toNumber(payload.totalIncome),
+    total_fixed: toNumber(payload.totalFixed),
+    total_variable: toNumber(payload.totalVariable),
+    total_debt_payments: toNumber(payload.totalDebtsMin),
+    balance: toNumber(payload.balance),
+    total_debt_amount: toNumber(payload.totalDebtAmount),
+    emotional_note: payload.emotionalNote ? String(payload.emotionalNote) : null,
+  };
+
+  const { error } = await supabase
+    .from('financial_snapshot')
+    .upsert(snapshot, { onConflict: 'user_id' });
+
+  if (error) throw error;
+};
+
+const saveSpendingRules = async (userId: string, payload: Record<string, unknown>) => {
+  const bannedList = Array.isArray(payload.bannedList) ? payload.bannedList : [];
+  const exceptions = Array.isArray(payload.exceptions) ? payload.exceptions : [];
+  const totalLimit = toNumber(payload.totalExceptionsLimit ?? payload.total_limit);
+
+  const { error } = await supabase
+    .from('spending_rules')
+    .upsert(
+      {
+        user_id: userId,
+        banned_list: bannedList,
+        exceptions,
+        total_limit: totalLimit,
+      },
+      { onConflict: 'user_id' }
+    );
+
+  if (error) throw error;
+};
+
+const saveCuts = async (userId: string, payload: Record<string, unknown>) => {
+  const cuts = Array.isArray(payload.cuts) ? payload.cuts : [];
+  if (cuts.length === 0) return;
+
+  const { error: deleteError } = await supabase
+    .from('cuts')
+    .delete()
+    .eq('user_id', userId);
+
+  if (deleteError) throw deleteError;
+
+  const rows = cuts.map((cut) => {
+    const categoryLabel = String(cut.category || '');
+    const actionLabel = String(cut.actionLabel || cut.actionType || '');
+    const specificCut = String(cut.specificCut || '').trim();
+    const clearLimit = String(cut.clearLimit || '').trim();
+
+    const item =
+      specificCut ||
+      clearLimit ||
+      categoryLabel ||
+      'Corte';
+
+    return {
+      user_id: userId,
+      item,
+      estimated_value: toNumber(cut.limitValue),
+      category: categoryLabel || actionLabel || null,
+      status: 'proposed',
+    };
+  });
+
+  const { error } = await supabase.from('cuts').insert(rows);
+  if (error) throw error;
+};
+
+const saveShadowExpenses = async (userId: string, payload: Record<string, unknown>) => {
+  const analyses = Array.isArray(payload.analyses) ? payload.analyses : [];
+  const avoidable = analyses
+    .filter((item) => item && typeof item === 'object')
+    .filter((item) => (item as { couldAvoid?: boolean }).couldAvoid);
+
+  if (avoidable.length === 0) return;
+
+  const names = avoidable
+    .map((item) => String((item as { name?: string }).name || '').trim())
+    .filter((name) => name.length > 0);
+
+  if (names.length === 0) return;
+
+  const { error: deleteError } = await supabase
+    .from('shadow_expenses')
+    .delete()
+    .eq('user_id', userId)
+    .in('name', names);
+
+  if (deleteError) throw deleteError;
+
+  const rows = avoidable.map((item) => ({
+    user_id: userId,
+    name: String((item as { name?: string }).name || 'Gasto'),
+    estimated_amount: null,
+    frequency: 'monthly',
+    status: 'pending',
+    monthly_limit: null,
+    comment: (item as { avoidanceStrategy?: string }).avoidanceStrategy || null,
+  }));
+
+  const { error } = await supabase.from('shadow_expenses').insert(rows);
+  if (error) throw error;
+};
 const saveMonthlyBudget = async (userId: string, payload: Record<string, unknown>) => {
   const monthYear = (payload.month_year as string) || getMonthYear();
   const essentials = extractEssentials(payload);
-  const essentialsTotal = sumValues(Object.values(essentials));
+  const essentialsOverride = toNumber(payload.essentials_total);
+  const essentialsTotal = essentialsOverride > 0 ? essentialsOverride : sumValues(Object.values(essentials));
+  const criticalBills = toNumber(payload.critical_bills);
+  const leisureMinimum = toNumber(payload.leisure_minimum);
   const income = toNumber(payload.income);
   const minimumDebts = toNumber(payload.minimum_debts);
-  const gap = income - essentialsTotal - minimumDebts;
+  const totalBudget = essentialsTotal + criticalBills + minimumDebts + leisureMinimum;
+  const gap = income - totalBudget;
+
+  const essentialsPayload: Record<string, number> = { ...essentials };
+  if (essentialsTotal > 0) essentialsPayload.total = essentialsTotal;
+  if (criticalBills > 0) essentialsPayload.critical_bills = criticalBills;
+  if (leisureMinimum > 0) essentialsPayload.leisure_minimum = leisureMinimum;
 
   const { error } = await supabase
     .from('monthly_budget')
@@ -103,7 +434,7 @@ const saveMonthlyBudget = async (userId: string, payload: Record<string, unknown
         user_id: userId,
         month_year: monthYear,
         income,
-        essentials,
+        essentials: essentialsPayload,
         minimum_debts: minimumDebts,
         gap,
       },
@@ -116,14 +447,21 @@ const saveMonthlyBudget = async (userId: string, payload: Record<string, unknown
 };
 
 const saveCardPolicy = async (userId: string, payload: Record<string, unknown>) => {
+  const weeklyLimit =
+    toNumber(payload.weekly_limit) ||
+    toNumber(payload.weeklyLimit);
+  const blockedCategories =
+    (payload.blocked_categories as string[]) ||
+    (payload.blockedCards as string[]) ||
+    [];
   const { error } = await supabase
     .from('card_policy')
     .upsert(
       {
         user_id: userId,
-        weekly_limit: toNumber(payload.weekly_limit),
+        weekly_limit: weeklyLimit,
         installment_rule: (payload.installment_rule as string) || null,
-        blocked_categories: (payload.blocked_categories as string[]) || [],
+        blocked_categories: blockedCategories,
       },
       { onConflict: 'user_id' }
     );
@@ -132,14 +470,50 @@ const saveCardPolicy = async (userId: string, payload: Record<string, unknown>) 
 };
 
 const savePlan306090 = async (userId: string, payload: Record<string, unknown>) => {
+  const goals30FromFields = [
+    payload.goal_30_1,
+    payload.goal_30_2,
+    payload.goal_30_3,
+  ]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value) => value.length > 0);
+  const goals60FromFields = [
+    payload.goal_60_1,
+    payload.goal_60_2,
+  ]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value) => value.length > 0);
+  const goals90FromFields = [
+    payload.goal_90_1,
+    payload.goal_90_2,
+  ]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value) => value.length > 0);
+
+  const goals30 = Array.isArray(payload.goals_30)
+    ? payload.goals_30
+    : splitLines(payload.goals_30).length > 0
+      ? splitLines(payload.goals_30)
+      : goals30FromFields;
+  const goals60 = Array.isArray(payload.goals_60)
+    ? payload.goals_60
+    : splitLines(payload.goals_60).length > 0
+      ? splitLines(payload.goals_60)
+      : goals60FromFields;
+  const goals90 = Array.isArray(payload.goals_90)
+    ? payload.goals_90
+    : splitLines(payload.goals_90).length > 0
+      ? splitLines(payload.goals_90)
+      : goals90FromFields;
+
   const { error } = await supabase
     .from('plan_306090')
     .upsert(
       {
         user_id: userId,
-        goals_30: splitLines(payload.goals_30),
-        goals_60: splitLines(payload.goals_60),
-        goals_90: splitLines(payload.goals_90),
+        goals_30: goals30,
+        goals_60: goals60,
+        goals_90: goals90,
       },
       { onConflict: 'user_id' }
     );
@@ -148,13 +522,16 @@ const savePlan306090 = async (userId: string, payload: Record<string, unknown>) 
 };
 
 const saveWeeklyRitual = async (userId: string, payload: Record<string, unknown>) => {
+  const checklist = Array.isArray(payload.checklist)
+    ? payload.checklist
+    : splitLines(payload.checklist);
   const { error } = await supabase
     .from('weekly_ritual')
     .upsert(
       {
         user_id: userId,
         day_of_week: payload.day_of_week === undefined ? null : Number(payload.day_of_week),
-        checklist: splitLines(payload.checklist),
+        checklist,
       },
       { onConflict: 'user_id' }
     );
@@ -274,18 +651,9 @@ export const calculateOutputMetrics = async (
   }
 
   if (dayId === 7) {
-    const monthYear = (payload.month_year as string) || getMonthYear();
-    const { data } = await supabase
-      .from('monthly_budget')
-      .select('gap, essentials, minimum_debts')
-      .eq('user_id', userId)
-      .eq('month_year', monthYear)
-      .maybeSingle();
-
-    const essentials = (data?.essentials as Record<string, number>) || {};
-    values.gap = data?.gap ?? 0;
-    values.essentialsTotal = sumValues(Object.values(essentials));
-    values.minimumDebts = data?.minimum_debts ?? 0;
+    values.totalObligations = toNumber(payload.totalObligations ?? payload.total_obligations);
+    values.criticalCount = toNumber(payload.criticalCount ?? payload.critical_count);
+    values.nextDueDate = String(payload.nextDueDate ?? payload.next_due_date ?? '-') || '-';
   }
 
   if (dayId === 5) {
@@ -315,55 +683,76 @@ export const calculateOutputMetrics = async (
   }
 
   if (dayId === 9) {
-    values.strategy = (payload.attack_strategy as string) || '-';
+    const monthYear = (payload.month_year as string) || getMonthYear();
+    const { data } = await supabase
+      .from('monthly_budget')
+      .select('gap, essentials, minimum_debts')
+      .eq('user_id', userId)
+      .eq('month_year', monthYear)
+      .maybeSingle();
+
+    const essentials = (data?.essentials as Record<string, number>) || {};
+    const essentialsTotal = essentials.total ?? sumValues(Object.values(essentials));
+    const leisureMinimum = essentials.leisure_minimum ?? 0;
+    const criticalBills = essentials.critical_bills ?? 0;
+    const minimumDebts = data?.minimum_debts ?? 0;
+    const totalBudget = essentialsTotal + criticalBills + minimumDebts + leisureMinimum;
+    const gap = data?.gap ?? 0;
+
+    values.totalBudget = totalBudget;
+    values.status = gap >= 0 ? 'Cabe no orcamento' : 'Nao cabe';
+    values.adjustment = gap < 0 ? Math.abs(gap) : 0;
   }
 
   if (dayId === 10) {
-    values.baseDefined = payload.max_entry || payload.max_installment ? 'Sim' : 'Nao';
+    values.maxEntry = toNumber(payload.max_entry);
+    values.maxInstallment = toNumber(payload.max_installment);
+    const checks = Array.isArray(payload.anti_fraud_check) ? payload.anti_fraud_check.length : 0;
+    values.safetyScore = `${checks}/4`;
   }
 
-  if (dayId === 11 || dayId === 12) {
-    const { data } = await supabase
-      .from('negotiations')
-      .select('status')
-      .eq('user_id', userId);
+  if (dayId === 11) {
+    values.quizScore = toNumber(payload.quiz_score);
+    values.confidenceLevel = toNumber(payload.confidence_level);
+  }
 
-    const negotiations = data || [];
-    values.negotiationsTotal = negotiations.length;
-    values.acceptedCount = negotiations.filter((item) => item.status === 'accepted').length;
-    values.pendingCount = negotiations.filter((item) => item.status === 'pending').length;
+  if (dayId === 12) {
+    values.agreementTotal = toNumber(payload.total_amount);
+    values.monthlyPayment = toNumber(payload.monthly_payment);
+    values.savings = toNumber(payload.savings);
   }
 
   if (dayId === 13) {
+    const rules = [payload.rule_1, payload.rule_2, payload.rule_3]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter((value) => value.length > 0);
+    values.rulesCount = rules.length;
+    values.mantra = rules[0] || '-';
+  }
+
+  if (dayId === 14) {
     const { data } = await supabase
       .from('plan_306090')
       .select('goals_30, goals_60, goals_90')
       .eq('user_id', userId)
       .maybeSingle();
 
-    const totalGoals =
-      (data?.goals_30?.length || 0) +
-      (data?.goals_60?.length || 0) +
-      (data?.goals_90?.length || 0);
+    const goals30 = data?.goals_30?.length || 0;
+    const goals60 = data?.goals_60?.length || 0;
+    const goals90 = data?.goals_90?.length || 0;
 
-    values.goalsCount = totalGoals;
-  }
-
-  if (dayId === 14) {
-    const { data } = await supabase
-      .from('weekly_ritual')
-      .select('checklist, day_of_week')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    const list = Array.isArray(data?.checklist) ? data?.checklist : [];
-    values.ritualItems = list.length;
-    values.ritualDay = getDayOfWeekLabel(data?.day_of_week ?? null);
+    values.goals30 = goals30;
+    values.goals60 = goals60;
+    values.goals90 = goals90;
   }
 
   if (dayId === 15) {
-    values.challengeDone = 'Sim';
-    values.nextStep = (payload.next_commitment as string) || '-';
+    const checklist = Array.isArray(payload.checklist) ? payload.checklist : [];
+    values.ritualDay = getDayOfWeekLabel(
+      payload.day_of_week === undefined ? null : Number(payload.day_of_week)
+    );
+    values.checklistItems = checklist.length;
+    values.challengeComplete = 'Sim';
   }
 
   return config.outputMetrics.map((metric) => ({
@@ -382,13 +771,32 @@ export const completeDay = async (
 
   if (dayId === 1) {
     await saveUserProfile(userId, payload);
+    await saveInitialAssessment(userId, payload);
+    await saveUserCommitment(userId, payload);
+    await saveDailyLog(userId, 1, payload);
+  }
+
+  if (dayId === 2) {
+    await saveDay2Financials(userId, payload);
   }
 
   if (dayId === 3) {
+    await saveShadowExpenses(userId, payload);
+  }
+
+  if (dayId === 4) {
+    await saveSpendingRules(userId, payload);
+  }
+
+  if (dayId === 6) {
+    await saveCuts(userId, payload);
+  }
+
+  if (dayId === 7) {
     await generateCalendarFromDebts(userId);
   }
 
-  if (dayId === 4 || dayId === 7) {
+  if (dayId === 9) {
     await saveMonthlyBudget(userId, payload);
   }
 
@@ -396,12 +804,13 @@ export const completeDay = async (
     await saveCardPolicy(userId, payload);
   }
 
-  if (dayId === 13) {
+  if (dayId === 14) {
     await savePlan306090(userId, payload);
   }
 
-  if (dayId === 14) {
+  if (dayId === 15) {
     await saveWeeklyRitual(userId, payload);
+    await saveDailyLog(userId, 15, payload);
   }
 
   const { error } = await supabase.from('day_progress').upsert(

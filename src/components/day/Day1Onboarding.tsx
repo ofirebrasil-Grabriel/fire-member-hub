@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -130,7 +130,7 @@ const MINIMUM_STEPS = [
     { value: 'other', label: 'Outro' },
 ];
 
-const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
+const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete, defaultValues }) => {
     // Main step: 1=Questions, 2=Thermometer, 3=Commitment, 4=Review, 5=Celebration
     const [mainStep, setMainStep] = useState<1 | 2 | 3 | 4 | 5>(1);
     const [questionIndex, setQuestionIndex] = useState(0);
@@ -164,6 +164,41 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
 
     const currentQuestion = QUESTIONS[questionIndex];
 
+    useEffect(() => {
+        if (!defaultValues) return;
+
+        const minimumStepLabel = String(defaultValues.minimum_step || '');
+        const matchingMinimumStep = MINIMUM_STEPS.find((step) => step.label === minimumStepLabel);
+
+        setFormData((prev) => ({
+            ...prev,
+            money_feeling: String(defaultValues.money_feeling || ''),
+            has_overdue_bills: String(defaultValues.has_overdue_bills || ''),
+            monthly_income: defaultValues.monthly_income ? String(defaultValues.monthly_income) : '',
+            top_expenses: Array.isArray(defaultValues.top_expenses)
+                ? defaultValues.top_expenses
+                : ['', '', ''],
+            shares_finances: defaultValues.shares_finances ? 'yes' : 'no',
+            shares_with: String(defaultValues.shares_with || ''),
+            biggest_blocker: String(defaultValues.biggest_blocker || ''),
+            main_goal: String(defaultValues.main_goal || ''),
+            tried_before: defaultValues.tried_before ? 'yes' : 'no',
+            what_blocked: String(defaultValues.what_blocked || ''),
+            breathe_score: Number(defaultValues.breathe_score ?? 5),
+            breathe_reason: String(defaultValues.breathe_reason || ''),
+            daily_time_period: String(defaultValues.daily_time_period || ''),
+            daily_time_exact: String(defaultValues.daily_time_exact || '09:00'),
+            reminder_enabled: Boolean(
+                defaultValues.reminder_enabled === undefined ? true : defaultValues.reminder_enabled
+            ),
+            reminder_channels: Array.isArray(defaultValues.reminder_channels)
+                ? defaultValues.reminder_channels
+                : ['push'],
+            minimum_step: matchingMinimumStep ? matchingMinimumStep.value : minimumStepLabel ? 'other' : '',
+            minimum_step_custom: matchingMinimumStep ? '' : minimumStepLabel,
+        }));
+    }, [defaultValues]);
+
     // Update field
     const updateField = (field: string, value: unknown) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -196,8 +231,13 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
             case 'multi-text':
                 const expenses = value as string[];
                 return expenses.filter(e => e.trim()).length >= 1;
-            case 'radio-conditional':
-                return Boolean(value);
+            case 'radio-conditional': {
+                if (!value) return false;
+                if (value === 'yes' && q.conditionalField) {
+                    return Boolean(String(formData[q.conditionalField] || '').trim());
+                }
+                return true;
+            }
             case 'textarea':
                 return Boolean(value) && String(value).trim().length > 0;
             default:
@@ -205,7 +245,7 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
         }
     };
 
-    const canProceedThermometer = true; // Justificativa é opcional
+    const canProceedThermometer = Boolean(String(formData.breathe_reason || '').trim());
 
     const canProceedCommitment = Boolean(formData.daily_time_period) &&
         Boolean(formData.daily_time_exact) &&
@@ -250,11 +290,11 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
             monthly_income: Number(formData.monthly_income),
             top_expenses: (formData.top_expenses as string[]).filter(e => e.trim()),
             shares_finances: formData.shares_finances === 'yes',
-            shares_with: formData.shares_with,
+            shares_with: formData.shares_finances === 'yes' ? formData.shares_with : null,
             biggest_blocker: formData.biggest_blocker,
             main_goal: formData.main_goal,
             tried_before: formData.tried_before === 'yes',
-            what_blocked: formData.what_blocked,
+            what_blocked: formData.tried_before === 'yes' ? formData.what_blocked : null,
             // Thermometer
             breathe_score: formData.breathe_score,
             breathe_reason: formData.breathe_reason,
@@ -394,6 +434,14 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
 
         return (
             <div className="space-y-6">
+                <Card className="glass-card border-primary/10">
+                    <CardContent className="p-4 text-sm text-muted-foreground flex items-center gap-3">
+                        <Heart className="h-5 w-5 text-primary" />
+                        <span>
+                            Este termometro e so seu. Serve para ajustar o ritmo, nao para julgar voce.
+                        </span>
+                    </CardContent>
+                </Card>
                 <div className="text-center">
                     <h2 className="text-xl font-bold mb-2">Termômetro Emocional</h2>
                     <p className="text-muted-foreground text-sm">
@@ -455,6 +503,14 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
     const renderCommitment = () => {
         return (
             <div className="space-y-6">
+                <Card className="glass-card border-primary/10">
+                    <CardContent className="p-4 text-sm text-muted-foreground flex items-center gap-3">
+                        <Target className="h-5 w-5 text-primary" />
+                        <span>
+                            Dez minutos por dia ja criam tracao. O importante e ter um horario fixo.
+                        </span>
+                    </CardContent>
+                </Card>
                 <div className="text-center">
                     <h2 className="text-xl font-bold mb-2">Seu Compromisso Diário</h2>
                     <p className="text-muted-foreground text-sm">
@@ -593,6 +649,14 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
 
         return (
             <div className="space-y-6">
+                <Card className="glass-card border-primary/10">
+                    <CardContent className="p-4 text-sm text-muted-foreground flex items-center gap-3">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        <span>
+                            Revisao rapida para garantir que esta tudo fiel a sua realidade.
+                        </span>
+                    </CardContent>
+                </Card>
                 <div className="text-center">
                     <h2 className="text-xl font-bold mb-2">Revisão</h2>
                     <p className="text-muted-foreground text-sm">
@@ -713,6 +777,14 @@ const Day1Onboarding: React.FC<Day1OnboardingProps> = ({ onComplete }) => {
             )}>
                 {mainStep === 1 && (
                     <div className="space-y-6">
+                        <Card className="glass-card border-primary/10">
+                            <CardContent className="p-4 text-sm text-muted-foreground flex items-center gap-3">
+                                <Heart className="h-5 w-5 text-primary" />
+                                <span>
+                                    Aqui nao tem julgamento. Sua sinceridade e a base para um plano realista.
+                                </span>
+                            </CardContent>
+                        </Card>
                         <div className="text-center">
                             <h2 className="text-xl font-bold mb-2">{currentQuestion.question}</h2>
                         </div>

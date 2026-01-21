@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,10 +10,21 @@ import {
     Zap, Clock, MessageSquare, CheckCircle2, Circle
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface Day8PaymentQueueProps {
     onComplete: (formData: Record<string, unknown>) => void;
     defaultValues?: Record<string, unknown>;
+}
+
+interface CalendarItemRow {
+    id: string;
+    title: string;
+    value: number | null;
+    due_date: string | null;
+    is_critical: boolean | null;
 }
 
 interface BillItem {
@@ -48,6 +59,27 @@ const CONSEQUENCE_OPTIONS = [
     { value: 'negotiable', label: 'Negociavel', icon: MessageSquare, description: 'Da pra pedir extensao/parcelar', multiplier: 3 },
 ];
 
+const normalizeImpactValue = (value: string) => {
+    const trimmed = value?.toString() || '';
+    const option = IMPACT_OPTIONS.find(opt => opt.value === trimmed || opt.label === trimmed);
+    return option?.value || '';
+};
+
+const normalizeConsequenceValue = (value: string) => {
+    const trimmed = value?.toString() || '';
+    const option = CONSEQUENCE_OPTIONS.find(opt => opt.value === trimmed || opt.label === trimmed);
+    return option?.value || '';
+};
+
+const normalizeActionType = (value: string) => {
+    const trimmed = value?.toString().toLowerCase();
+    if (!trimmed) return 'protection';
+    if (trimmed.includes('protec') || trimmed === 'protection') return 'protection';
+    if (trimmed.includes('risco') || trimmed === 'risk_reduction') return 'risk_reduction';
+    if (trimmed.includes('corte') || trimmed === 'cut') return 'cut';
+    return 'protection';
+};
+
 const BILL_SUGGESTIONS = [
     { name: 'Aluguel', amount: 0, category: 'housing' },
     { name: 'Condominio', amount: 0, category: 'housing' },
@@ -66,8 +98,13 @@ const BILL_SUGGESTIONS = [
     { name: 'Alimentacao basica', amount: 0, category: 'health' },
 ];
 
-const Day8PaymentQueue: React.FC<Day8PaymentQueueProps> = ({ onComplete }) => {
+const Day8PaymentQueue: React.FC<Day8PaymentQueueProps> = ({ onComplete, defaultValues }) => {
+    const { user } = useAuth();
     const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+    const [loadingCalendar, setLoadingCalendar] = useState(false);
+    const [prefilledCount, setPrefilledCount] = useState(0);
+    const [prefillDone, setPrefillDone] = useState(false);
+    const [defaultsLoaded, setDefaultsLoaded] = useState(false);
 
     // Step 1: Survival window
     const [nextPayDate, setNextPayDate] = useState('');
@@ -93,6 +130,100 @@ const Day8PaymentQueue: React.FC<Day8PaymentQueueProps> = ({ onComplete }) => {
 
     // Get current bill
     const currentBill = bills.find(b => b.id === currentBillId);
+
+    useEffect(() => {
+        if (!defaultValues || defaultsLoaded) return;
+
+        const values = defaultValues as Record<string, unknown>;
+        if (values.nextPayDate) {
+            setNextPayDate(String(values.nextPayDate));
+        }
+        if (values.availableMoney !== undefined) {
+            setAvailableMoney(Number(values.availableMoney) || 0);
+        }
+
+        if (Array.isArray(values.bills) && values.bills.length > 0) {
+            const mappedBills = (values.bills as Array<Record<string, unknown>>).map((bill, index) => ({
+                id: `saved-${index}`,
+                name: String(bill.name || 'Conta'),
+                amount: Number(bill.amount || 0),
+                dueDate: String(bill.dueDate || ''),
+                impact: normalizeImpactValue(String(bill.impact || bill.impact_label || '')),
+                consequence: normalizeConsequenceValue(String(bill.consequence || bill.consequence_label || '')),
+                priority: Number(bill.priority || 99),
+                status: (bill.status as BillItem['status']) || 'pending',
+            }));
+            setBills(mappedBills);
+            setPrefilledCount(mappedBills.length);
+            setPrefillDone(true);
+        }
+
+        if (values.selectedPlan) {
+            setSelectedPlan(values.selectedPlan as 'A' | 'B' | 'C');
+        }
+        if (values.emergencyReason) {
+            setEmergencyReason(String(values.emergencyReason));
+        }
+        if (Array.isArray(values.actions)) {
+            const mappedActions = (values.actions as Array<Record<string, unknown>>).map((action, index) => ({
+                id: String(index + 1),
+                type: normalizeActionType(String(action.type || action.label || '')),
+                description: String(action.description || ''),
+                completed: false,
+            }));
+            const fallback = [
+                { id: '1', type: 'protection' as const, description: '', completed: false },
+                { id: '2', type: 'risk_reduction' as const, description: '', completed: false },
+                { id: '3', type: 'cut' as const, description: '', completed: false },
+            ];
+            setActions(
+                fallback.map((item, index) => mappedActions[index] || item)
+            );
+        }
+
+        setDefaultsLoaded(true);
+    }, [defaultValues, defaultsLoaded]);
+
+    useEffect(() => {
+        if (!user?.id || prefillDone) return;
+
+        const loadCalendar = async () => {
+            setLoadingCalendar(true);
+            try {
+                const { data, error } = await supabase
+                    .from('calendar_items')
+                    .select('id, title, value, due_date, is_critical')
+                    .eq('user_id', user.id)
+                    .order('due_date', { ascending: true });
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const mapped = (data as CalendarItemRow[]).map((item) => ({
+                        id: `cal-${item.id}`,
+                        name: item.title || 'Conta',
+                        amount: item.value ? Number(item.value) : 0,
+                        dueDate: item.due_date || '',
+                        impact: '',
+                        consequence: '',
+                        priority: 99,
+                        status: 'pending' as const,
+                    }));
+
+                    setBills((prev) => (prev.length > 0 ? prev : mapped));
+                    setPrefilledCount(mapped.length);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar calendario', error);
+                toast({ title: 'Erro ao carregar contas do calendario', variant: 'destructive' });
+            } finally {
+                setLoadingCalendar(false);
+                setPrefillDone(true);
+            }
+        };
+
+        loadCalendar();
+    }, [user?.id, prefillDone]);
 
     // Add bill from suggestion
     const handleAddBillSuggestion = (suggestion: typeof BILL_SUGGESTIONS[0]) => {
@@ -191,8 +322,10 @@ const Day8PaymentQueue: React.FC<Day8PaymentQueueProps> = ({ onComplete }) => {
                 name: b.name,
                 amount: b.amount,
                 dueDate: b.dueDate,
-                impact: IMPACT_OPTIONS.find(i => i.value === b.impact)?.label || b.impact,
-                consequence: CONSEQUENCE_OPTIONS.find(c => c.value === b.consequence)?.label || b.consequence,
+                impact: b.impact,
+                impact_label: IMPACT_OPTIONS.find(i => i.value === b.impact)?.label || b.impact,
+                consequence: b.consequence,
+                consequence_label: CONSEQUENCE_OPTIONS.find(c => c.value === b.consequence)?.label || b.consequence,
                 priority: b.priority,
                 status: b.status,
             })),
@@ -201,7 +334,8 @@ const Day8PaymentQueue: React.FC<Day8PaymentQueueProps> = ({ onComplete }) => {
             selectedPlan: stats.gap > 0 ? selectedPlan : null,
             emergencyReason: selectedPlan === 'C' ? emergencyReason : null,
             actions: actions.map(a => ({
-                type: a.type === 'protection' ? 'Protecao' : a.type === 'risk_reduction' ? 'Reducao de risco' : 'Corte',
+                type: a.type,
+                label: a.type === 'protection' ? 'Protecao' : a.type === 'risk_reduction' ? 'Reducao de risco' : 'Corte',
                 description: a.description,
             })),
             payNowTotal: stats.payNow,
@@ -283,6 +417,16 @@ const Day8PaymentQueue: React.FC<Day8PaymentQueueProps> = ({ onComplete }) => {
                         <p className="text-sm text-muted-foreground mb-4">
                             O que vence ate a data do proximo recebimento?
                         </p>
+                        {loadingCalendar && (
+                            <p className="text-xs text-muted-foreground mb-4">
+                                Carregando contas do calendario...
+                            </p>
+                        )}
+                        {!loadingCalendar && prefilledCount > 0 && (
+                            <p className="text-xs text-muted-foreground mb-4">
+                                Carregamos {prefilledCount} contas do calendario do Dia 7.
+                            </p>
+                        )}
 
                         {/* Suggestions */}
                         <div className="mb-4">

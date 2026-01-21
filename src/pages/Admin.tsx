@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAdmin, DayContent, Setting, UserWithProgress } from '@/hooks/useAdmin';
 import { 
@@ -83,6 +83,22 @@ const Admin = () => {
   const [editingSetting, setEditingSetting] = useState<EditableSetting | null>(null);
   const [newSettingDialog, setNewSettingDialog] = useState(false);
   const [newSettingData, setNewSettingData] = useState({ key: '', value: '', description: '' });
+  const [aiBudgetInput, setAiBudgetInput] = useState('');
+
+  const aiBudgetSetting = settings.find((setting) => setting.key === 'ai_budget_brl');
+
+  useEffect(() => {
+    if (!aiBudgetSetting) {
+      setAiBudgetInput('');
+      return;
+    }
+    const value = typeof aiBudgetSetting.value === 'number'
+      ? String(aiBudgetSetting.value)
+      : typeof aiBudgetSetting.value === 'string'
+        ? aiBudgetSetting.value
+        : JSON.stringify(aiBudgetSetting.value);
+    setAiBudgetInput(value);
+  }, [aiBudgetSetting]);
 
   if (loading) {
     return (
@@ -264,6 +280,26 @@ const Admin = () => {
       setNewSettingData({ key: '', value: '', description: '' });
     } else {
       toast({ title: 'Erro ao criar', variant: 'destructive' });
+    }
+  };
+
+  const handleSaveAiBudget = async () => {
+    const normalized = aiBudgetInput.replace(',', '.');
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      toast({ title: 'Informe um valor valido em R$', variant: 'destructive' });
+      return;
+    }
+
+    const description = 'Limite global de gasto com IA (R$)';
+    const success = aiBudgetSetting
+      ? await updateSetting('ai_budget_brl', parsed)
+      : await createSetting('ai_budget_brl', parsed, description);
+
+    if (success) {
+      toast({ title: 'Limite de IA atualizado!' });
+    } else {
+      toast({ title: 'Erro ao salvar limite de IA', variant: 'destructive' });
     }
   };
 
@@ -598,6 +634,30 @@ const Admin = () => {
                 <Plus className="w-4 h-4" />
                 Nova Configuração
               </Button>
+            </div>
+
+            <div className="glass-card p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="font-medium">Limite global de IA</p>
+                  <p className="text-sm text-muted-foreground">Define o teto mensal em R$ para uso de IA.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={aiBudgetInput}
+                    onChange={(e) => setAiBudgetInput(e.target.value)}
+                    placeholder="0"
+                    className="w-32"
+                  />
+                  <Button onClick={handleSaveAiBudget} className="gap-2">
+                    <Save className="w-4 h-4" />
+                    Salvar
+                  </Button>
+                </div>
+              </div>
             </div>
             
             <div className="glass-card overflow-hidden">

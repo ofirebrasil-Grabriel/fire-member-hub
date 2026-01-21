@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,9 @@ import {
     Plus, Trash2, DollarSign, Star, AlertTriangle
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface Day5CardPolicyProps {
     onComplete: (formData: Record<string, unknown>) => void;
@@ -40,8 +43,10 @@ const BLOCKED_REASONS = [
     'Cria ilusao de que "ainda tem credito"',
 ];
 
-const Day5CardPolicy: React.FC<Day5CardPolicyProps> = ({ onComplete }) => {
+const Day5CardPolicy: React.FC<Day5CardPolicyProps> = ({ onComplete, defaultValues }) => {
+    const { user } = useAuth();
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+    const [loading, setLoading] = useState(true);
 
     // Step 1: Cards list
     const [cards, setCards] = useState<CardItem[]>([]);
@@ -59,6 +64,74 @@ const Day5CardPolicy: React.FC<Day5CardPolicyProps> = ({ onComplete }) => {
 
     // Step 4: Weekly limit
     const [weeklyLimit, setWeeklyLimit] = useState<number>(100);
+
+    useEffect(() => {
+        const loadData = async () => {
+            if (!user?.id) return;
+            setLoading(true);
+            try {
+                if (defaultValues && Object.keys(defaultValues).length > 0) {
+                    const storedMain = String(defaultValues.mainCardName || '');
+                    const storedBlocked = Array.isArray(defaultValues.blockedCards)
+                        ? (defaultValues.blockedCards as string[])
+                        : [];
+                    const storedExceptions = Array.isArray(defaultValues.exceptions)
+                        ? (defaultValues.exceptions as CardException[])
+                        : [];
+                    const storedWeeklyLimit = Number(defaultValues.weeklyLimit || 0);
+
+                    if (storedMain || storedBlocked.length > 0) {
+                        const uniqueNames = [
+                            storedMain,
+                            ...storedBlocked,
+                        ].filter((name, index, arr) => name && arr.indexOf(name) === index);
+
+                        setCards(
+                            uniqueNames.map((name, index) => ({
+                                id: `card-${index}`,
+                                name,
+                                isMain: name === storedMain || (!storedMain && index === 0),
+                            }))
+                        );
+                    }
+
+                    if (storedExceptions.length > 0) {
+                        setExceptions(
+                            storedExceptions.map((item, index) => ({
+                                id: item.id || `exc-${index}`,
+                                name: item.name,
+                                weeklyLimit: Number(item.weeklyLimit) || 0,
+                            }))
+                        );
+                    }
+
+                    if (storedWeeklyLimit > 0) {
+                        setWeeklyLimit(storedWeeklyLimit);
+                    }
+                    return;
+                }
+
+                const { data, error } = await supabase
+                    .from('card_policy')
+                    .select('weekly_limit, blocked_categories')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data?.weekly_limit) {
+                    setWeeklyLimit(Number(data.weekly_limit));
+                }
+            } catch (error) {
+                console.error('Erro ao carregar politica do cartao', error);
+                toast({ title: 'Erro ao carregar politica do cartao', variant: 'destructive' });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [user?.id, defaultValues]);
 
     // Add card
     const handleAddCard = () => {
@@ -133,7 +206,8 @@ const Day5CardPolicy: React.FC<Day5CardPolicyProps> = ({ onComplete }) => {
     // Validation
     const canProceedStep1 = cards.length >= 1;
     const canProceedStep2 = cards.some(c => c.isMain);
-    const canComplete = canProceedStep1 && canProceedStep2;
+    const hasExceptions = exceptions.some(e => e.weeklyLimit > 0);
+    const canComplete = canProceedStep1 && canProceedStep2 && weeklyLimit > 0 && hasExceptions;
 
     // Handle complete
     const handleComplete = () => {
@@ -141,18 +215,30 @@ const Day5CardPolicy: React.FC<Day5CardPolicyProps> = ({ onComplete }) => {
             mainCardName: stats.mainCard?.name || '',
             blockedCount: stats.blockedCount,
             blockedCards: stats.blockedCards.map(c => c.name),
+            blocked_categories: stats.blockedCards.map(c => c.name),
             exceptionsCount: stats.exceptionsCount,
             exceptions: exceptions.map(e => ({
                 name: e.name,
                 weeklyLimit: e.weeklyLimit,
             })),
             weeklyLimit: stats.weeklyLimit,
+            weekly_limit: stats.weeklyLimit,
             totalExceptionsLimit: stats.totalExceptionsLimit,
         });
     };
 
     return (
         <div className="space-y-6">
+            <Card className="glass-card border-primary/10">
+                <CardContent className="p-4 text-sm text-muted-foreground">
+                    Um cartao principal, limite claro e poucas excecoes. Isso reduz ansiedade e evita surpresa.
+                </CardContent>
+            </Card>
+
+            {loading && (
+                <div className="text-sm text-muted-foreground">Carregando politica atual...</div>
+            )}
+
             {/* Progress */}
             <div className="flex gap-1">
                 {[1, 2, 3, 4].map(s => (
@@ -383,6 +469,12 @@ const Day5CardPolicy: React.FC<Day5CardPolicyProps> = ({ onComplete }) => {
                                 </span>
                             </div>
                         </div>
+
+                        {!hasExceptions && (
+                            <div className="mt-3 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 text-sm text-yellow-700">
+                                Adicione pelo menos uma excecao com limite realista.
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex justify-between gap-4">

@@ -84,59 +84,6 @@ export const DayModalContent = ({ dayId }: DayModalContentProps) => {
       });
     }
 
-    entries.push({
-      id: 'diary',
-      title: 'Diario de Sentimentos',
-      description: 'Escreva suas reflexoes do dia',
-      completed: hasDiary,
-      icon: <BookOpen className="h-4 w-4 text-primary" />,
-      content: <DiaryEntry dayId={dayId} />,
-    });
-
-    if (day.reflectionQuestions.length > 0) {
-      entries.push({
-        id: 'reflection',
-        title: 'Reflexao Guiada',
-        description: 'Perguntas para aprofundar o dia',
-        icon: <MessageSquare className="h-4 w-4 text-primary" />,
-        content: (
-          <div className="glass-card p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <MessageSquare className="h-5 w-5 text-primary" />
-              </div>
-              <h4 className="font-semibold">Reflexao guiada</h4>
-            </div>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              {day.reflectionQuestions.map((question, index) => (
-                <li key={question} className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface text-xs text-muted-foreground">
-                    {index + 1}
-                  </span>
-                  <span>{question}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ),
-      });
-    }
-
-    if (day.nextDayPreview) {
-      entries.push({
-        id: 'next-day',
-        title: 'Amanha',
-        description: 'O que vem a seguir',
-        icon: <ArrowRight className="h-4 w-4 text-primary" />,
-        content: (
-          <div className="glass-card p-6">
-            <h4 className="mb-3 font-semibold">Amanha</h4>
-            <p className="text-sm text-muted-foreground">{day.nextDayPreview}</p>
-          </div>
-        ),
-      });
-    }
-
     return entries;
   }, [day, dayId, hasDiary]);
 

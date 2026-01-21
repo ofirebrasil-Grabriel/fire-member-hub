@@ -27,6 +27,7 @@ import { formatCurrency } from '@/lib/utils';
 interface Day3TransactionTableProps {
     onComplete: (values: Record<string, unknown>) => void;
     defaultValues?: Record<string, unknown>;
+    submitLabel?: string;
 }
 
 const CATEGORIES = [
@@ -41,11 +42,17 @@ const CATEGORIES = [
     'Outros',
 ];
 
-export default function Day3TransactionTable({ onComplete, defaultValues }: Day3TransactionTableProps) {
-    const { fetchAll, create, update, remove, markAsShadow, getTop5ByAmount } = useTransactions();
+export default function Day3TransactionTable({
+    onComplete,
+    defaultValues,
+    submitLabel,
+}: Day3TransactionTableProps) {
+    const { fetchAll, create, bulkCreate, update, remove, markAsShadow, getTop5ByAmount } = useTransactions();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [adding, setAdding] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const [importOnlyExpenses, setImportOnlyExpenses] = useState(true);
 
     // New transaction state
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
@@ -137,6 +144,106 @@ export default function Day3TransactionTable({ onComplete, defaultValues }: Day3
         }
     };
 
+    const parseCsvAmount = (value: string) => {
+        const cleaned = value.replace(/[^0-9,.-]/g, '');
+        const normalized = cleaned.includes(',')
+            ? cleaned.replace(/\./g, '').replace(',', '.')
+            : cleaned;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const parseCsvDate = (value: string) => {
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+            const [day, month, year] = trimmed.split('/');
+            return `${year}-${month}-${day}`;
+        }
+        if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+            const [day, month, year] = trimmed.split('-');
+            return `${year}-${month}-${day}`;
+        }
+        return '';
+    };
+
+    const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setImporting(true);
+
+        try {
+            const text = await file.text();
+            const lines = text
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter(Boolean);
+
+            if (lines.length === 0) {
+                toast({ title: 'Arquivo vazio', variant: 'destructive' });
+                return;
+            }
+
+            const firstLine = lines[0];
+            const delimiter =
+                firstLine.includes(';') && firstLine.split(';').length >= firstLine.split(',').length
+                    ? ';'
+                    : ',';
+            let startIndex = 0;
+            const header = firstLine.toLowerCase();
+            if (header.includes('data') || header.includes('date')) {
+                startIndex = 1;
+            }
+
+            const rows = [];
+            for (let i = startIndex; i < lines.length; i += 1) {
+                const columns = lines[i]
+                    .split(delimiter)
+                    .map((value) => value.replace(/^"|"$/g, '').trim());
+                if (columns.length < 3) continue;
+
+                const date = parseCsvDate(columns[0]);
+                const description = columns[1] || '';
+                const amountRaw = parseCsvAmount(columns[2]);
+                const category = columns[3] || undefined;
+
+                if (!date || !description || !amountRaw) continue;
+                if (importOnlyExpenses && amountRaw > 0) continue;
+
+                rows.push({
+                    date,
+                    description,
+                    amount: Math.abs(amountRaw),
+                    category,
+                    is_shadow: false,
+                    status: 'uncategorized',
+                    source: 'import',
+                });
+            }
+
+            if (rows.length === 0) {
+                toast({ title: 'Nenhuma transacao valida encontrada', variant: 'destructive' });
+                return;
+            }
+
+            const created = await bulkCreate(rows);
+            if (created.length === 0) {
+                toast({ title: 'Nao foi possivel importar', variant: 'destructive' });
+                return;
+            }
+
+            toast({ title: 'Transacoes importadas!' });
+            await loadData();
+        } catch (error) {
+            console.error('Erro ao importar CSV', error);
+            toast({ title: 'Erro ao importar CSV', variant: 'destructive' });
+        } finally {
+            setImporting(false);
+            event.target.value = '';
+        }
+    };
+
     const stats = useMemo(() => {
         const total = transactions.reduce((acc, t) => acc + Number(t.amount), 0);
         const shadowCount = transactions.filter(t => t.is_shadow).length;
@@ -161,6 +268,33 @@ export default function Day3TransactionTable({ onComplete, defaultValues }: Day3
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="glass-card p-4 space-y-3">
+                <div>
+                    <h3 className="font-semibold">Importar extrato (CSV simples)</h3>
+                    <p className="text-xs text-muted-foreground">
+                        Colunas esperadas: data, descricao, valor, categoria (opcional).
+                    </p>
+                </div>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <Input
+                        type="file"
+                        accept=".csv,text/csv"
+                        onChange={handleImportFile}
+                        className="md:max-w-xs"
+                    />
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Switch
+                            checked={importOnlyExpenses}
+                            onCheckedChange={(value) => setImportOnlyExpenses(Boolean(value))}
+                        />
+                        Importar apenas saidas
+                    </label>
+                </div>
+                {importing && (
+                    <p className="text-xs text-muted-foreground">Importando...</p>
+                )}
+            </div>
+
             <div className="grid gap-4 md:grid-cols-3">
                 <Card className="bg-card/50 border-primary/10">
                     <CardContent className="pt-6">
@@ -316,7 +450,7 @@ export default function Day3TransactionTable({ onComplete, defaultValues }: Day3
 
             <div className="sticky bottom-0 bg-background/80 backdrop-blur pb-4 pt-2 border-t border-border/50">
                 <Button onClick={handleComplete} className="w-full btn-fire" size="lg">
-                    Concluir Analise da Arqueologia
+                    {submitLabel || 'Concluir Analise da Arqueologia'}
                 </Button>
             </div>
         </div>

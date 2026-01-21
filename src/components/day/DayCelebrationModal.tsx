@@ -295,7 +295,7 @@ const DayCelebrationModal: React.FC<DayCelebrationModalProps> = ({
                                     onClick={handleContinue}
                                 >
                                     <ArrowRight className="mr-2 h-4 w-4" />
-                                    {dayId < 15 ? 'Continuar para o próximo dia' : 'Finalizar desafio'}
+                                    {dayId < 15 ? 'Continuar para a próxima tarefa' : 'Finalizar desafio'}
                                 </Button>
                             </motion.div>
                         </div>

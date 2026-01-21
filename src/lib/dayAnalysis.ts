@@ -67,6 +67,20 @@ export function generateDayAnalysis(dayId: number, formData: Record<string, unkn
             return generateDay7Analysis(formData);
         case 8:
             return generateDay8Analysis(formData);
+        case 9:
+            return generateDay9Analysis(formData);
+        case 10:
+            return generateDay10Analysis(formData);
+        case 11:
+            return generateDay11Analysis(formData);
+        case 12:
+            return generateDay12Analysis(formData);
+        case 13:
+            return generateDay13Analysis(formData);
+        case 14:
+            return generateDay14Analysis(formData);
+        case 15:
+            return generateDay15Analysis(formData);
         default:
             return generateGenericAnalysis(dayId, formData);
     }
@@ -481,21 +495,19 @@ function generateDay6Analysis(formData: Record<string, unknown>): string {
 }
 
 function generateDay7Analysis(formData: Record<string, unknown>): string {
-    const monthlySavings = Number(formData.monthly_savings) || 0;
-    const actionType = formData.action_type as string || '';
+    const totalObligations = Number(formData.totalObligations ?? formData.total_obligations) || 0;
+    const criticalCount = Number(formData.criticalCount ?? formData.critical_count) || 0;
+    const nextDueDate = String(formData.nextDueDate ?? formData.next_due_date ?? '').trim();
 
-    let analysis = 'Conta fixa reduzida com sucesso! ';
-
-    if (monthlySavings > 0) {
-        const yearly = monthlySavings * 12;
-        analysis += `Economia de R$ ${monthlySavings.toFixed(2)}/mes = R$ ${yearly.toFixed(2)}/ano. `;
+    let analysis = 'CALENDARIO FINANCEIRO ORGANIZADO\n\n';
+    analysis += `Obrigacoes registradas: ${totalObligations}\n`;
+    analysis += `Criticas: ${criticalCount}\n`;
+    if (nextDueDate) {
+        analysis += `Proximo vencimento: ${nextDueDate}\n`;
     }
 
-    if (actionType === 'cancel') {
-        analysis += 'Cancelar foi a melhor escolha - dinheiro que volta para o seu bolso.';
-    } else if (actionType === 'negotiate') {
-        analysis += 'Negociar e uma habilidade que voce pode usar em varias situacoes.';
-    }
+    analysis += '\nAgora voce tem previsibilidade. Evitar atrasos e juros ja reduz ansiedade.\n';
+    analysis += 'Use lembretes e revise o calendario toda semana.';
 
     return analysis;
 }
@@ -565,6 +577,178 @@ function generateDay8Analysis(formData: Record<string, unknown>): string {
         });
     }
 
+    return analysis;
+}
+
+function generateDay9Analysis(formData: Record<string, unknown>): string {
+    const income = Number(formData.income) || 0;
+    const essentialsTotal = Number(formData.essentials_total) || 0;
+    const criticalBills = Number(formData.critical_bills) || 0;
+    const minimumDebts = Number(formData.minimum_debts) || 0;
+    const leisureMinimum = Number(formData.leisure_minimum) || 0;
+    const totalBudget = essentialsTotal + minimumDebts + leisureMinimum;
+    const gap = income - totalBudget;
+
+    let analysis = 'ORCAMENTO MINIMO - 30 DIAS\n\n';
+    analysis += `Renda mensal: R$ ${income.toFixed(2)}\n`;
+    if (essentialsTotal > 0) {
+        analysis += `Essenciais: R$ ${essentialsTotal.toFixed(2)}\n`;
+    }
+    if (criticalBills > 0) {
+        analysis += `Contas criticas: R$ ${criticalBills.toFixed(2)}\n`;
+    }
+    if (minimumDebts > 0) {
+        analysis += `Dividas minimas: R$ ${minimumDebts.toFixed(2)}\n`;
+    }
+    if (leisureMinimum > 0) {
+        analysis += `Lazer minimo: R$ ${leisureMinimum.toFixed(2)}\n`;
+    }
+    analysis += `Orcamento total: R$ ${totalBudget.toFixed(2)}\n\n`;
+
+    if (gap >= 0) {
+        analysis += `Cabe no orcamento. Sobra estimada: R$ ${gap.toFixed(2)}.\n`;
+        analysis += 'Use essa folga para acelerar dividas ou criar reserva.\n';
+    } else {
+        analysis += `Nao cabe no orcamento. Falta: R$ ${Math.abs(gap).toFixed(2)}.\n`;
+        analysis += 'Reveja cortes do Dia 6 e reduza despesas variaveis.\n';
+    }
+
+    return analysis;
+}
+
+function generateDay10Analysis(formData: Record<string, unknown>): string {
+    const maxEntry = Number(formData.max_entry) || 0;
+    const maxInstallment = Number(formData.max_installment) || 0;
+    const checks = Array.isArray(formData.anti_fraud_check) ? formData.anti_fraud_check.length : 0;
+
+    let analysis = 'MAPA DE NEGOCIACAO - LIMITES DEFINIDOS\n\n';
+    if (maxEntry > 0) {
+        analysis += `Entrada maxima: R$ ${maxEntry.toFixed(2)}\n`;
+    }
+    if (maxInstallment > 0) {
+        analysis += `Parcela maxima: R$ ${maxInstallment.toFixed(2)}\n`;
+    }
+    analysis += `Checklist de seguranca: ${checks}/4\n\n`;
+    analysis += 'Voce esta preparado para negociar com clareza e sem cair em golpes.';
+    return analysis;
+}
+
+function generateDay11Analysis(formData: Record<string, unknown>): string {
+    const quizScore = Number(formData.quiz_score) || 0;
+    const confidence = Number(formData.confidence_level) || 0;
+    const learnings = String(formData.key_learnings || '').trim();
+
+    let analysis = 'TREINO DE NEGOCIACAO\n\n';
+    analysis += `Pontuacao no quiz: ${quizScore}/10\n`;
+    analysis += `Confianca para negociar: ${confidence}/10\n`;
+    if (learnings) {
+        analysis += `Aprendizados: "${removeEmojis(learnings)}"\n`;
+    }
+    analysis += '\nConhecimento reduz ansiedade. Voce esta mais preparado para o contato real.';
+    return analysis;
+}
+
+function generateDay12Analysis(formData: Record<string, unknown>): string {
+    const creditor = String(formData.creditor_name || '').trim();
+    const totalAmount = Number(formData.total_amount) || 0;
+    const monthlyPayment = Number(formData.monthly_payment) || 0;
+    const installments = Number(formData.installments) || 0;
+    const savings = Number(formData.savings) || 0;
+
+    let analysis = 'ACORDO REGISTRADO\n\n';
+    if (creditor) {
+        analysis += `Credor: ${removeEmojis(creditor)}\n`;
+    }
+    if (totalAmount > 0) {
+        analysis += `Valor total: R$ ${totalAmount.toFixed(2)}\n`;
+    }
+    if (monthlyPayment > 0) {
+        analysis += `Parcela mensal: R$ ${monthlyPayment.toFixed(2)}\n`;
+    }
+    if (installments > 0) {
+        analysis += `Parcelas: ${installments}\n`;
+    }
+    if (savings > 0) {
+        analysis += `Economia gerada: R$ ${savings.toFixed(2)}\n`;
+    }
+    analysis += '\nRegistrar o acordo protege voce. Guarde comprovantes e protocolos.';
+    return analysis;
+}
+
+function generateDay13Analysis(formData: Record<string, unknown>): string {
+    const rules = [formData.rule_1, formData.rule_2, formData.rule_3]
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter((value) => value.length > 0);
+
+    let analysis = 'NOVAS REGRAS DE VIDA\n\n';
+    rules.forEach((rule, index) => {
+        analysis += `${index + 1}. ${removeEmojis(rule)}\n`;
+    });
+    if (rules.length === 0) {
+        analysis += 'Nenhuma regra registrada.\n';
+    }
+    analysis += '\nRegras claras evitam impulsos. Revisite este contrato sempre que precisar.';
+    return analysis;
+}
+
+function generateDay14Analysis(formData: Record<string, unknown>): string {
+    const goals30 = Array.isArray(formData.goals_30)
+        ? formData.goals_30.map((value) => String(value).trim()).filter((value) => value.length > 0)
+        : [formData.goal_30_1, formData.goal_30_2, formData.goal_30_3]
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter((value) => value.length > 0);
+    const goals60 = Array.isArray(formData.goals_60)
+        ? formData.goals_60.map((value) => String(value).trim()).filter((value) => value.length > 0)
+        : [formData.goal_60_1, formData.goal_60_2]
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter((value) => value.length > 0);
+    const goals90 = Array.isArray(formData.goals_90)
+        ? formData.goals_90.map((value) => String(value).trim()).filter((value) => value.length > 0)
+        : [formData.goal_90_1, formData.goal_90_2]
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter((value) => value.length > 0);
+
+    let analysis = 'PLANO 30/90 DIAS\n\n';
+    if (goals30.length > 0) {
+        analysis += 'Metas 30 dias:\n';
+        goals30.forEach((goal) => {
+            analysis += `  - ${removeEmojis(goal)}\n`;
+        });
+    }
+    if (goals60.length > 0) {
+        analysis += 'Metas 60 dias:\n';
+        goals60.forEach((goal) => {
+            analysis += `  - ${removeEmojis(goal)}\n`;
+        });
+    }
+    if (goals90.length > 0) {
+        analysis += 'Metas 90 dias:\n';
+        goals90.forEach((goal) => {
+            analysis += `  - ${removeEmojis(goal)}\n`;
+        });
+    }
+    if (goals30.length + goals60.length + goals90.length === 0) {
+        analysis += 'Nenhuma meta registrada.\n';
+    }
+    analysis += '\nMetas claras criam direcao e ajudam a manter o foco.';
+    return analysis;
+}
+
+function generateDay15Analysis(formData: Record<string, unknown>): string {
+    const dayOfWeek = Number(formData.day_of_week);
+    const checklist = Array.isArray(formData.checklist) ? formData.checklist : [];
+    const nextCommitment = String(formData.next_commitment || '').trim();
+
+    const weekdayLabels = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+    const dayLabel = Number.isFinite(dayOfWeek) ? (weekdayLabels[dayOfWeek] || '-') : '-';
+
+    let analysis = 'FORMATURA FIRE\n\n';
+    analysis += `Dia do ritual semanal: ${dayLabel}\n`;
+    analysis += `Itens do checklist: ${checklist.length}\n`;
+    if (nextCommitment) {
+        analysis += `Proximo compromisso: ${removeEmojis(nextCommitment)}\n`;
+    }
+    analysis += '\nParabens! Voce concluiu o desafio e tem um ritual para manter a consistencia.';
     return analysis;
 }
 

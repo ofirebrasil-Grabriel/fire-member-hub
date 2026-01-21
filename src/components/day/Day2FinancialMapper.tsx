@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowRight, ArrowLeft, Plus, X, Check, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Plus, X, Check, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -93,9 +93,6 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
     const [debtMonthly, setDebtMonthly] = useState('');
     const [debtTotal, setDebtTotal] = useState('');
 
-    const currentStep = STEPS[currentStepIndex];
-    const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
-
     // Cálculos
     const totalFixed = useMemo(() =>
         Object.values(fixedExpenses).reduce((sum, val) => sum + val, 0),
@@ -120,24 +117,181 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
     const totalExpenses = totalFixed + totalDaily + totalDebtPayments;
     const balance = monthlyIncome - totalExpenses;
 
+    const currentStep = STEPS[currentStepIndex];
+    const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
+    const debtRatio = monthlyIncome > 0 ? totalDebtPayments / monthlyIncome : 0;
+    const fixedRatio = monthlyIncome > 0 ? totalFixed / monthlyIncome : 0;
+
+    const stepMessageMap: Record<Step, { title: string; message: string }> = {
+        income: {
+            title: 'Tudo começa pela renda real',
+            message: 'Sem julgamento. O foco e entender a foto completa para decidir com clareza.',
+        },
+        fixed: {
+            title: 'Contas fixas dão previsibilidade',
+            message: 'Liste o que vence todo mes. Isso evita sustos e juros.',
+        },
+        daily: {
+            title: 'Gastos diarios mostram vazamentos',
+            message: 'Nao precisa ser perfeito. Uma estimativa honesta ja ajuda muito.',
+        },
+        debts: {
+            title: 'Dividas mapeadas = pressao menor',
+            message: 'Aqui voce tira o peso do segredo e ganha controle.',
+        },
+        summary: {
+            title: 'Seu raio-x esta pronto',
+            message: 'Agora temos base para agir. Sem culpa, com estrategia.',
+        },
+    };
+
+    const summaryPieData = [
+        { name: 'Fixas', value: totalFixed },
+        { name: 'Dia a dia', value: totalDaily },
+        { name: 'Dividas', value: totalDebtPayments },
+    ].filter((item) => item.value > 0);
+
+    const barData = [
+        { name: 'Renda', value: monthlyIncome },
+        { name: 'Despesas', value: totalExpenses },
+    ];
+
+    const pieColors = ['#34d399', '#fb923c', '#ef4444'];
+
     // Carregar dados do Dia 1 e existentes
     useEffect(() => {
         const loadData = async () => {
             if (!user) return;
             setLoading(true);
             try {
-                // Buscar renda do Dia 1
-                const { data: assessment } = await supabase
-                    .from('initial_assessment')
-                    .select('monthly_income')
-                    .eq('user_id', user.id)
-                    .single();
-
-                if (assessment?.monthly_income) {
-                    setMonthlyIncome(assessment.monthly_income);
+                if (defaultValues && Object.keys(defaultValues).length > 0) {
+                    const storedDebts = (defaultValues.debts as DebtItem[]) || [];
+                    setMonthlyIncome(Number(defaultValues.totalIncome ?? defaultValues.monthly_income ?? 0));
+                    setFixedExpenses((defaultValues.fixedExpenses as Record<string, number>) || {});
+                    setDailyExpenses((defaultValues.dailyExpenses as ExpenseItem[]) || []);
+                    setDebts(storedDebts);
+                    setHasDebts(storedDebts.length > 0 ? true : null);
+                    setEmotionalNote(String(defaultValues.emotionalNote || ''));
+                    return;
                 }
 
-                // TODO: Carregar dados existentes se houver
+                const [assessmentResult, incomeResult, fixedResult, variableResult, debtResult] =
+                    await Promise.all([
+                        supabase
+                            .from('initial_assessment')
+                            .select('monthly_income')
+                            .eq('user_id', user.id)
+                            .maybeSingle(),
+                        supabase
+                            .from('income_items')
+                            .select('amount, recurrence')
+                            .eq('user_id', user.id),
+                        supabase
+                            .from('fixed_expenses')
+                            .select('name, amount, category')
+                            .eq('user_id', user.id),
+                        supabase
+                            .from('variable_expenses')
+                            .select('id, name, amount, category')
+                            .eq('user_id', user.id),
+                        supabase
+                            .from('debts')
+                            .select('id, creditor, installment_value, total_balance')
+                            .eq('user_id', user.id),
+                    ]);
+
+                const incomeItems = incomeResult.data || [];
+                const monthlyFromItems = incomeItems.reduce((sum, item) => {
+                    let monthlyAmount = Number(item.amount) || 0;
+                    if (item.recurrence === 'weekly') monthlyAmount *= 4;
+                    if (item.recurrence === 'biweekly') monthlyAmount *= 2;
+                    if (item.recurrence === 'one_time') monthlyAmount = 0;
+                    return sum + monthlyAmount;
+                }, 0);
+
+                if (monthlyFromItems > 0) {
+                    setMonthlyIncome(monthlyFromItems);
+                } else if (assessmentResult.data?.monthly_income) {
+                    setMonthlyIncome(Number(assessmentResult.data.monthly_income));
+                }
+
+                const fixedByLabel = FIXED_CATEGORIES.reduce<Record<string, string>>((acc, item) => {
+                    acc[item.label.toLowerCase()] = item.id;
+                    return acc;
+                }, {});
+                const fixedByCategory: Record<string, string> = {
+                    housing: 'housing',
+                    transport: 'transport',
+                    education: 'education',
+                    health: 'health',
+                };
+
+                const fixedLoaded = (fixedResult.data || []).reduce<Record<string, number>>((acc, item) => {
+                    const name = (item.name || '').toLowerCase();
+                    let categoryId = fixedByLabel[name] || fixedByCategory[item.category || ''] || '';
+                    if (!categoryId && item.category === 'utilities') {
+                        if (name.includes('luz') || name.includes('energia')) categoryId = 'electricity';
+                        if (name.includes('agua')) categoryId = 'water';
+                        if (name.includes('internet')) categoryId = 'internet';
+                        if (name.includes('celular') || name.includes('telefone')) categoryId = 'phone';
+                    }
+                    if (!categoryId) return acc;
+                    acc[categoryId] = (acc[categoryId] || 0) + (Number(item.amount) || 0);
+                    return acc;
+                }, {});
+                if (Object.keys(fixedLoaded).length > 0) {
+                    setFixedExpenses(fixedLoaded);
+                }
+
+                const dailyByLabel = DAILY_CATEGORIES.reduce<Record<string, typeof DAILY_CATEGORIES[0]>>(
+                    (acc, item) => {
+                        acc[item.label.toLowerCase()] = item;
+                        return acc;
+                    },
+                    {}
+                );
+                const dailyLoaded = (variableResult.data || []).map((item) => {
+                    const name = String(item.name || '');
+                    const lowerName = name.toLowerCase();
+                    let categoryId = dailyByLabel[lowerName]?.id;
+                    if (!categoryId) {
+                        if (item.category === 'food') {
+                            categoryId = lowerName.includes('mercado') ? 'market' : 'food';
+                        } else if (item.category === 'transport') {
+                            categoryId = 'transport';
+                        } else if (item.category === 'leisure') {
+                            categoryId = 'leisure';
+                        } else if (item.category === 'shopping') {
+                            categoryId = 'clothing';
+                        } else if (item.category === 'health') {
+                            categoryId = 'pharmacy';
+                        } else {
+                            categoryId = 'other';
+                        }
+                    }
+                    const category = DAILY_CATEGORIES.find((cat) => cat.id === categoryId) || DAILY_CATEGORIES[0];
+                    return {
+                        id: String(item.id),
+                        category: category.id,
+                        emoji: category.emoji,
+                        label: name || category.label,
+                        amount: Number(item.amount) || 0,
+                    } satisfies ExpenseItem;
+                });
+                if (dailyLoaded.length > 0) {
+                    setDailyExpenses(dailyLoaded);
+                }
+
+                const debtLoaded = (debtResult.data || []).map((item) => ({
+                    id: String(item.id),
+                    name: item.creditor || 'Divida',
+                    monthlyPayment: Number(item.installment_value) || 0,
+                    totalAmount: Number(item.total_balance) || 0,
+                }));
+                if (debtLoaded.length > 0) {
+                    setDebts(debtLoaded);
+                    setHasDebts(true);
+                }
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
             } finally {
@@ -145,7 +299,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
             }
         };
         loadData();
-    }, [user]);
+    }, [user, defaultValues]);
 
     // Navegação
     const canProceed = () => {
@@ -315,6 +469,18 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                 </div>
                 <Progress value={progress} className="h-2" />
             </div>
+
+            <Card className="glass-card border-primary/10">
+                <CardContent className="p-4 flex items-start gap-3">
+                    <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold">{stepMessageMap[currentStep].title}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {stepMessageMap[currentStep].message}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
 
             <AnimatePresence mode="wait">
                 <motion.div
@@ -618,6 +784,76 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                                     </span>
                                 </div>
                             </div>
+
+                            {summaryPieData.length > 0 && (
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <Card className="bg-card/50 border-primary/10">
+                                        <CardContent className="pt-6">
+                                            <p className="text-sm font-medium text-muted-foreground mb-3">
+                                                Distribuicao das despesas
+                                            </p>
+                                            <div className="h-52">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={summaryPieData}
+                                                            dataKey="value"
+                                                            nameKey="name"
+                                                            innerRadius={50}
+                                                            outerRadius={80}
+                                                        >
+                                                            {summaryPieData.map((entry, index) => (
+                                                                <Cell
+                                                                    key={`cell-${entry.name}`}
+                                                                    fill={pieColors[index % pieColors.length]}
+                                                                />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="bg-card/50 border-primary/10">
+                                        <CardContent className="pt-6">
+                                            <p className="text-sm font-medium text-muted-foreground mb-3">
+                                                Renda x despesas
+                                            </p>
+                                            <div className="h-52">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={barData}>
+                                                        <XAxis dataKey="name" />
+                                                        <YAxis />
+                                                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                                        <Bar dataKey="value" fill="#60a5fa" radius={[6, 6, 0, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            )}
+
+                            {(debtRatio > 0.3 || fixedRatio > 0.6) && (
+                                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500 flex items-start gap-3">
+                                    <AlertTriangle className="h-5 w-5 mt-0.5" />
+                                    <div>
+                                        <p className="font-semibold">Atenção aos limites</p>
+                                        {debtRatio > 0.3 && (
+                                            <p>
+                                                Sua parcela de dividas esta acima de 30% da renda. Vale olhar isso com carinho.
+                                            </p>
+                                        )}
+                                        {fixedRatio > 0.6 && (
+                                            <p>
+                                                As contas fixas passam de 60% da renda. Talvez precise renegociar ou reduzir.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Mensagem */}
                             {balance < 0 && (

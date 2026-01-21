@@ -5,7 +5,15 @@ import Day3TriggerAnalysis from '@/components/day/Day3TriggerAnalysis';
 import Day4SpendingRules from '@/components/day/Day4SpendingRules';
 import Day5CardPolicy from '@/components/day/Day5CardPolicy';
 import Day6QuickCuts from '@/components/day/Day6QuickCuts';
+import Day7Calendar from '@/components/day/Day7Calendar';
 import Day8PaymentQueue from '@/components/day/Day8PaymentQueue';
+import Day9MinimumBudget from '@/components/day/Day9MinimumBudget';
+import Day10NegotiationMap from '@/components/day/Day10NegotiationMap';
+import Day11NegotiationQuiz from '@/components/day/Day11NegotiationQuiz';
+import Day12AgreementForm from '@/components/day/Day12AgreementForm';
+import Day13LifeRules from '@/components/day/Day13LifeRules';
+import Day14Plan3090 from '@/components/day/Day14Plan3090';
+import Day15Graduation from '@/components/day/Day15Graduation';
 import { DayInputForm } from '@/components/challenge/DayInputForm';
 import { CrudSection, CrudType } from '@/components/challenge/CrudSection';
 import { Loader2 } from 'lucide-react';
@@ -79,6 +87,13 @@ export default function DayTaskTab({
                     />
                 )}
 
+                {dayId === 7 && (
+                    <Day7Calendar
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
                 {dayId === 8 && (
                     <Day8PaymentQueue
                         onComplete={onComplete}
@@ -86,8 +101,57 @@ export default function DayTaskTab({
                     />
                 )}
 
+                {dayId === 9 && (
+                    <Day9MinimumBudget
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 10 && (
+                    <Day10NegotiationMap
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 11 && (
+                    <Day11NegotiationQuiz
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 12 && (
+                    <Day12AgreementForm
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 13 && (
+                    <Day13LifeRules
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 14 && (
+                    <Day14Plan3090
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
+                {dayId === 15 && (
+                    <Day15Graduation
+                        onComplete={onComplete}
+                        defaultValues={defaultValues}
+                    />
+                )}
+
                 {/* Adicione mais dias customizados aqui conforme necessário */}
-                {![1, 2, 3, 4, 5, 6, 8].includes(dayId) && (
+                {![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(dayId) && (
                     <div className="text-center py-8 text-muted-foreground">
                         Componente customizado para o Dia {dayId} ainda não implementado.
                     </div>

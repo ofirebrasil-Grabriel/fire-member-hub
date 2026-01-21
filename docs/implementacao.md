@@ -1,575 +1,550 @@
-# Plano de Implementação - FIRE Brasil 15D
+# Plano de Implementacao Detalhado - FIRE 15D
 
-## 1. ANÁLISE DA ESTRUTURA ATUAL
-
-### 1.1 O que já existe no código
-
-| Componente | Status | Localização |
-|------------|--------|-------------|
-| `dayEngine.ts` | ⚠️ Simplificado | `src/config/dayEngine.ts` |
-| Tabela `debts` | ✅ Implementado | `supabase/migrations/...debts.sql` |
-| Tabela `calendar_items` | ✅ Implementado | `supabase/migrations/...calendar.sql` |
-| Tabela `cuts` | ✅ Implementado | `supabase/migrations/...cuts.sql` |
-| Tabela `negotiations` | ✅ Implementado | `supabase/migrations/...negotiations.sql` |
-| Tabela `plan_306090` | ⚠️ Básico | `supabase/migrations/...plan_306090.sql` |
-| `UserProgressContext` | ⚠️ localStorage | `src/contexts/UserProgressContext.tsx` |
-| Hooks de CRUD | ✅ Básico | `src/hooks/useDebts.ts`, etc. |
-
-### 1.2 GAPs Identificados
-
-1. **dayEngine.ts não reflete estrutura_curso.md** - Títulos e tarefas divergem
-2. **Formulários complexos dos dias não existem** - Dia 1 tem 12 perguntas, código tem 5 inputs
-3. **Faltam tabelas**: `income_items`, `fixed_expenses`, `variable_expenses`, `transactions`, `shadow_expenses`, `agreements`, `negotiation_plans`, `emergency_fund`, `weekly_protocol`, `decision_rules`, `progress_dashboard`
-4. **Progresso não sincroniza com Supabase** - Usa localStorage
-5. **Não há geração de PDF** - Edge Function necessária
-6. **Faltam campos**: `motivation_phrase`, `reward_label`, `pdf_url` na tabela `days`
+Este documento consolida o plano tecnico e de experiencia para tornar o app funcional e eficaz para o usuario final.
+Bases analisadas:
+- `docs/Guia de Orientacao de Experiencia Humana para a IA.md`
+- `docs/Manual de Alma do App FIRE_ Jornada Emocional e Tom de Voz (15 Dias).md`
+- `docs/app_fire_reescrito.md`
+- Estado atual do repositorio
 
 ---
 
-## 2. MIGRAÇÕES SQL NECESSÁRIAS
+## 1. Principios humanos obrigatorios (Guia + Manual)
 
-### 2.1 Atualizar tabela `days`
-
-```sql
--- Migration: add_motivation_reward_to_days.sql
-ALTER TABLE public.days 
-ADD COLUMN IF NOT EXISTS motivation_phrase text,
-ADD COLUMN IF NOT EXISTS reward_label text,
-ADD COLUMN IF NOT EXISTS reward_icon text;
-```
-
-### 2.2 Criar tabela `day_progress`
-
-```sql
--- Migration: create_day_progress.sql
-CREATE TABLE public.day_progress (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  day_id integer NOT NULL,
-  completed boolean DEFAULT false,
-  completed_at timestamptz,
-  completed_tasks jsonb DEFAULT '[]',
-  form_data jsonb DEFAULT '{}',
-  mood text,
-  diary_entry text,
-  pdf_url text,
-  reward_claimed boolean DEFAULT false,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
-  UNIQUE (user_id, day_id)
-);
-
-ALTER TABLE public.day_progress ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own progress" ON public.day_progress
-  FOR ALL USING (auth.uid() = user_id);
-```
-
-### 2.3 Criar tabelas financeiras
-
-```sql
--- Migration: create_income_items.sql
-CREATE TABLE public.income_items (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  source text NOT NULL,
-  amount numeric(12,2) NOT NULL,
-  received_on integer CHECK (received_on >= 1 AND received_on <= 31),
-  recurrence text CHECK (recurrence IN ('monthly', 'weekly', 'one_time')),
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_fixed_expenses.sql
-CREATE TABLE public.fixed_expenses (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  name text NOT NULL,
-  category text,
-  amount numeric(12,2) NOT NULL,
-  due_date integer,
-  payment_method text,
-  priority text CHECK (priority IN ('essential', 'important', 'negotiable', 'pausable')),
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_variable_expenses.sql
-CREATE TABLE public.variable_expenses (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  name text NOT NULL,
-  category text,
-  amount numeric(12,2) NOT NULL,
-  spent_on date NOT NULL,
-  is_essential boolean DEFAULT true,
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_transactions.sql
-CREATE TABLE public.transactions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  date date NOT NULL,
-  description text NOT NULL,
-  amount numeric(12,2) NOT NULL,
-  category text,
-  is_shadow boolean DEFAULT false,
-  status text CHECK (status IN ('essential', 'superfluous', 'shadow')),
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_shadow_expenses.sql
-CREATE TABLE public.shadow_expenses (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  name text NOT NULL,
-  estimated_amount numeric(12,2),
-  status text CHECK (status IN ('cut', 'pause', 'keep')),
-  comment text,
-  created_at timestamptz DEFAULT now()
-);
-```
-
-### 2.4 Criar tabelas de negociação
-
-```sql
--- Migration: create_negotiation_plans.sql
-CREATE TABLE public.negotiation_plans (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  debt_id uuid REFERENCES public.debts(id) ON DELETE CASCADE,
-  objective text CHECK (objective IN ('reduce_interest', 'extend_term', 'discount_cash', 'suspend')),
-  max_monthly_payment numeric(12,2),
-  priority text CHECK (priority IN ('high', 'medium', 'low')),
-  contact_info jsonb,
-  scripts text,
-  scheduled_at timestamptz,
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_negotiation_sessions.sql
-CREATE TABLE public.negotiation_sessions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  negotiation_plan_id uuid REFERENCES public.negotiation_plans(id) ON DELETE CASCADE,
-  scheduled_at timestamptz,
-  status text CHECK (status IN ('pending', 'completed', 'counter_offer', 'accepted', 'rejected')),
-  notes text,
-  proposed_value numeric(12,2),
-  proposed_installments integer,
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_agreements.sql
-CREATE TABLE public.agreements (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  debt_id uuid REFERENCES public.debts(id),
-  total_amount numeric(12,2) NOT NULL,
-  monthly_payment numeric(12,2) NOT NULL,
-  interest_rate numeric(5,2),
-  installments integer NOT NULL,
-  start_date date NOT NULL,
-  contract_path text,
-  created_at timestamptz DEFAULT now()
-);
-```
-
-### 2.5 Criar tabelas Plano 30/90 e Regras
-
-```sql
--- Migration: create_plans.sql
-CREATE TABLE public.plans (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  cycle_type text NOT NULL CHECK (cycle_type IN ('30', '90')),
-  mode text CHECK (mode IN ('emergency', 'balance', 'traction')),
-  start_date date NOT NULL,
-  status text DEFAULT 'active',
-  created_at timestamptz DEFAULT now()
-);
-
-CREATE TABLE public.plan_essentials (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  plan_id uuid REFERENCES public.plans(id) ON DELETE CASCADE,
-  name text NOT NULL,
-  due_date integer,
-  minimum_amount numeric(12,2),
-  payment_method text
-);
-
-CREATE TABLE public.plan_debt_priorities (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  plan_id uuid REFERENCES public.plans(id) ON DELETE CASCADE,
-  debt_id uuid REFERENCES public.debts(id),
-  action_type text CHECK (action_type IN ('negotiate', 'pay_minimum', 'protect')),
-  action_value numeric(12,2)
-);
-
-CREATE TABLE public.plan_levers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  plan_id uuid REFERENCES public.plans(id) ON DELETE CASCADE,
-  type text,
-  goal_text text NOT NULL,
-  weekly_action text,
-  success_criteria text
-);
-
--- Migration: create_emergency_fund.sql
-CREATE TABLE public.emergency_fund (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  account_info text,
-  monthly_contribution numeric(12,2),
-  goal_amount numeric(12,2),
-  current_balance numeric(12,2) DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_weekly_protocol.sql
-CREATE TABLE public.weekly_protocol (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  day_of_week integer CHECK (day_of_week >= 0 AND day_of_week <= 6),
-  time time,
-  checklist jsonb NOT NULL,
-  active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_decision_rules.sql
-CREATE TABLE public.decision_rules (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  primary_trigger text,
-  default_action text,
-  levels jsonb NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-
--- Migration: create_progress_dashboard.sql
-CREATE TABLE public.progress_dashboard (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  indicators jsonb NOT NULL,
-  commitment_phrase text,
-  created_at timestamptz DEFAULT now()
-);
-```
+- Persona central: sobrevivente financeiro (ansiedade, vergonha, medo do julgamento).
+- Tom de voz: acolhedor, validacao explicita, zero bronca, mentor empatico.
+- Regra de ouro: se o usuario estivesse chorando, esta tela acalma ou sobrecarrega?
+- Dias 1 e 2 sao criticos para reduzir vergonha/medo e gerar compromisso emocional.
+- Progresso medido em paz mental e clareza (Termometro Respirar + Insight Cards).
 
 ---
 
-## 3. IMPLEMENTAÇÃO POR DIA
+## 2. Diagnostico do repositorio atual
+
+### 2.1 UI/Fluxo
+- Fluxo principal hoje: `ChallengePath` -> `DayModal` -> `DayTaskTab`.
+- Ha fluxo paralelo em `DayPage` que duplica experiencia e logica.
+- Componentes customizados existem apenas para dias 1-6 e 8.
+- Conteudo textual vem da tabela `days` (Supabase) via `useDays`/`useDay`.
+
+### 2.2 Dados e persistencia
+- Progresso geral: `day_progress` (Supabase).
+- Estrutura do desafio: `src/config/dayEngine.ts` (DAY_ENGINE).
+- Persistencia auxiliar: `src/services/dayEngine.ts` (salva alguns dias).
+- Migrations mostram duplicidade de tabelas e schemas (ex: `debts`, `negotiations`, `variable_expenses`).
+- Dias 1 e 2 possuem tabelas novas (`initial_assessment`, `daily_log`, `user_commitment`, `financial_snapshot`), mas o fluxo atual nao grava nelas.
+
+### 2.3 Relatorios e analises
+- Relatorios customizados so para Dia 1 e 2.
+- `dayAnalysis` cobre Dias 1-8; Dias 9-15 estao sem analise dedicada.
+- `ReportRenderer` so mapeia dias 1-2.
+
+### 2.4 IA
+- Nao existe camada de IA (sem Edge Functions ou servicos dedicados).
+
+---
+
+## 3. Gaps e riscos (comparado ao app_fire_reescrito)
+
+- Divergencia de conteudo e sequencia entre `app_fire_reescrito` e `dayEngine` (ex: Dia 9).
+- Duplicidade de schemas: `debts` vs `financial_snapshot` vs `monthly_budget`.
+- Variaveis e fixas com campos divergentes das especificacoes.
+- Termometro Respirar nao e registrado diariamente (tabela `daily_log` nao usada).
+- Notificacoes do compromisso (Dia 1) nao existem.
+- Importacao de extratos (Dia 2/3) nao implementada.
+- IA nao implementada para gatilhos, categorizacao e scripts.
+- Conteudo de `days` incompleto ou nao alinhado ao tom de voz.
+
+---
+
+## 4. Decisoes de alinhamento (recomendado)
+
+1) Fluxo unico: manter `ChallengePath + DayModal` e aposentar `DayPage`.
+2) Fonte de verdade por camada:
+   - Conteudo: tabela `days`.
+   - Estrutura/inputs/outputs: `dayEngine`.
+   - Dados do usuario: tabelas dedicadas + copia em `day_progress.form_data`.
+3) Unificar schema financeiro seguindo `app_fire_reescrito` e migrations do Dia 1/2.
+4) Unificar `user_id` em `auth.users` (ou garantir `profiles` sempre criado).
+5) Criar componente padrao de Insight Cards e check-in emocional diario.
+
+---
+
+## 5. Plano macro por fases
+
+### Fase 0 - Alinhamento de base (concluida)
+- Decisoes fechadas (Dia 9, schema negociacoes, limite IA global).
+- `dayEngine` alinhado ao `app_fire_reescrito`.
+
+### Fase 1 - Conteudo e fluxo principal (2-4 dias)
+- Popular `days` com conteudo completo (mensagens, conceitos, tarefas, reflexoes).
+- Garantir colunas `motivation_phrase`, `reward_label`, `reward_icon`.
+- Remover ou desativar `DayPage` para fluxo unico (ChallengePath + DayModal).
+- Consolidar `DayCompletedTab` + relatorios por dia.
+
+### Fase 2 - Dias 1 e 2 (3-5 dias)
+- Persistencia completa nas tabelas novas.
+- Validacoes obrigatorias e Insight Cards.
+- Relatorio Dia 1 e 2 alinhados ao tom emocional.
+
+### Fase 3 - Dias 3 a 6 (5-8 dias)
+- Dia 3 (extratos, transacoes e gatilhos).
+- Dia 4 (regra da pausa e contrato).
+- Dia 5 (politica do cartao).
+- Dia 6 (cortes rapidos + economia).
+
+### Fase 4 - Dias 7 a 9 (4-6 dias)
+- Dia 7 (calendario de vencimentos).
+- Dia 8 (fila de pagamento).
+- Dia 9 (orcamento minimo).
+
+### Fase 5 - Dias 10 a 12 (5-7 dias)
+- Mapa de negociacao.
+- Treino (quiz) e fechamento de acordo.
+- Integracao com `negotiation_plans/sessions/agreements`.
+
+### Fase 6 - Dias 13 a 15 (4-6 dias)
+- Dia 13 (novas regras de vida).
+- Dia 14 (plano 30/90).
+- Dia 15 (formatura + ritual semanal).
+
+### Fase 7 - IA (paralela)
+- Edge Functions, prompts e logs (`ai_insights`).
+- Integrar IA em dias 3, 8, 10, 14 e 15.
+
+---
+
+## 6. Plano detalhado por dia
 
 ### DIA 1 - Boas-vindas e Despertar
 
-**Objetivo**: Reconhecer emoções, crenças sobre dinheiro, conhecer regras do desafio.
+Objetivo humano: acolher, reduzir ansiedade, gerar compromisso.
 
-**Formulário (12 perguntas)**:
-```typescript
-interface Day1FormData {
-  feeling_about_money: 'light' | 'heavy' | 'want_to_run';
-  first_money_memories: string;
-  rich_people_traits: string;
-  poor_people_traits: string;
-  current_emotions: string[];
-  ideal_life: string;
-  current_issues: string[];
-  monthly_income: number;
-  biggest_expense: string;
-  has_partner: 'yes' | 'no' | 'sometimes';
-  biggest_block: string;
-  goal_15_days: string;
-  schedule_time: string;
-  breath_score: number; // 0-10
-  breath_note: string;
-}
-```
+O que implementar:
+- Fluxo em 4 passos conforme `app_fire_reescrito`.
+- Termometro Respirar com justificativa obrigatoria.
+- Insight Cards de validacao emocional (inicio e fim).
 
-**Componente**: `src/components/day/Day1Form.tsx`
+O que ajustar:
+- `Day1Onboarding.tsx`: obrigar `breathe_reason`, validar 8 perguntas, manter tom acolhedor.
+- `dayEngine.ts`: salvar em `initial_assessment`, `daily_log`, `user_commitment`.
+- `UserProgressContext`: atualizar `current_day` apos conclusao.
 
-**Salvar em**: `day_progress.form_data` (JSON)
+Como deve ficar:
+- Dados salvos em 3 tabelas + `day_progress.form_data`.
+- Mensagem final celebratoria e preview do Dia 2.
+- Preparar notificacoes (push/whatsapp/email) via tabela `notifications`.
+
+IA:
+- (Opcional) gerar micro-mensagem personalizada de acolhimento ao final.
 
 ---
 
 ### DIA 2 - Raio-X do Caos
 
-**Objetivo**: Mapear entradas e saídas de dinheiro.
+Objetivo humano: transformar medo em clareza.
 
-**Stepper 3 passos**:
-1. Entradas → CRUD `income_items`
-2. Saídas fixas → CRUD `fixed_expenses`
-3. Saídas variáveis + dívidas → CRUD `variable_expenses` + `debts`
+O que implementar:
+- Stepper 4 passos: entradas, fixas, variaveis, dividas + resumo.
+- Alertas condicionais (sobra/falta, juros altos).
+- Atualizar Termometro (opcional no final).
 
-**Componente**: `src/components/day/Day2Stepper.tsx`
+O que ajustar:
+- `Day2FinancialMapper.tsx`: refatorar para schema completo e multiplas fontes.
+- Reusar hooks (`useIncomeItems`, `useFixedExpenses`, `useVariableExpenses`, `useDebts`).
+- `dayEngine.ts`: calcular e salvar `financial_snapshot`.
 
-**Output automático**: Calcular totais e sobra/falta
+Como deve ficar:
+- `income_items`, `fixed_expenses`, `variable_expenses`, `debts`, `financial_snapshot` atualizados.
+- Resumo visual com graficos (pizza + barras).
+
+IA:
+- Categorizacao automatica e sugestao de juros se o usuario nao souber.
 
 ---
 
 ### DIA 3 - Arqueologia Financeira
 
-**Objetivo**: Investigar últimos 90 dias, identificar padrões.
+Objetivo humano: curiosidade e auto-reflexao.
 
-**Funcionalidades**:
-- Upload/import de extratos (CSV/OFX) → `transactions`
-- Tabela interativa para categorizar
-- Marcar despesas sombra (`is_shadow = true`)
-- Identificar Top 5 despesas
+O que implementar:
+- Importacao de extratos (CSV/OFX/Open Banking).
+- Lista de transacoes com categorizacao e marcacao de gastos sombra.
+- Insight de gatilhos emocionais.
 
-**Componente**: `src/components/day/Day3TransactionTable.tsx`
+O que ajustar:
+- `Day3TriggerAnalysis.tsx`: integrar com `transactions` e `shadow_expenses`.
+- `dayEngine.ts`: salvar analises e gerar output metrics.
+
+Como deve ficar:
+- Base de transacoes categorizadas + mapa de gatilhos.
+
+IA:
+- Classificar transacoes e sugerir gatilhos padroes.
 
 ---
 
 ### DIA 4 - Regra da Pausa
 
-**Objetivo**: Congelar cartões, ativar regra 24h.
+Objetivo humano: criar protecao com regras realistas.
 
-**Formulário**:
-```typescript
-interface Day4FormData {
-  frozen_cards: string[];
-  emergency_card: string;
-  triggers: string[];
-  substitute_actions: string[];
-  rule_24h_enabled: boolean;
-}
-```
+O que implementar:
+- Contrato visual de regras e limites.
+- Validacao de regras (nao banir tudo).
 
-**Salvar em**: `card_policy` + `day_progress.form_data`
+O que ajustar:
+- Criar tabela `spending_rules` (ou reaproveitar `decision_rules`).
+- `dayEngine.ts`: salvar contrato e gerar resumo.
 
----
+Como deve ficar:
+- Regras salvas com limites e excecoes.
 
-### DIA 5 - Cartão: Parar Fatura
-
-**Objetivo**: Controlar cartão, evitar rotativo.
-
-**Funcionalidades**:
-- Listar faturas em aberto
-- Calcular rotativo
-- Definir regras de uso
-
-**Salvar em**: `card_policy`
+IA:
+- Validar regras e sugerir ajustes realistas.
 
 ---
 
-### DIA 6 - Vazamentos Invisíveis
+### DIA 5 - Politica do Cartao
 
-**Objetivo**: Eliminar gastos pequenos recorrentes.
+Objetivo humano: controle e disciplina sem culpa.
 
-**CRUD**: `shadow_expenses` com status (cut/pause/keep)
+O que implementar:
+- Escolha do cartao principal, bloqueio visual e limite semanal.
+- Excecoes com limites por categoria.
 
-**Output**: Economia total prevista
+O que ajustar:
+- `Day5CardPolicy.tsx`: mapear campos para tabela `card_policy`.
+- `dayEngine.ts`: salvar politica e permitir edicao.
 
----
+Como deve ficar:
+- Card principal definido, outros bloqueados e limite semanal visivel.
 
-### DIA 7 - Vencimentos
-
-**Objetivo**: Organizar por data de vencimento.
-
-**Componente**: Calendário visual
-- Dados de `fixed_expenses`, `debts`, `agreements`
-- Permitir alterar datas
-
----
-
-### DIA 8 - Prioridades
-
-**Objetivo**: Decidir o que pagar primeiro quando não dá.
-
-**Matriz de prioridade**:
-- Classificar `fixed_expenses` por priority
-- Atualizar `fixed_expenses.priority`
+IA:
+- (Opcional) sugerir limite semanal baseado na renda e gastos.
 
 ---
 
-### DIA 9 - Orçamento Mínimo 30 Dias
+### DIA 6 - Cortes Rapidos
 
-**Objetivo**: Construir orçamento mínimo realista.
+Objetivo humano: folego rapido e foco.
 
-**Calcular**:
-- Total essenciais
-- Tetos variáveis
-- Comparar com renda
+O que implementar:
+- Cortes por categoria + acao (pausa/reducao/troca).
+- Estimativa de economia e reforco emocional.
 
-**Salvar em**: `monthly_budget`
+O que ajustar:
+- `Day6QuickCuts.tsx`: persistir em `cuts`.
+- `dayEngine.ts`: atualizar output metrics.
 
----
+Como deve ficar:
+- Lista de cortes ativa e revisavel.
 
-### DIA 10 - Mapa de Negociação
-
-**Objetivo**: Criar plano para negociar dívidas.
-
-**CRUD**: `negotiation_plans`
-- Vincular a `debts`
-- Definir objetivo, limite, scripts
+IA:
+- Sugerir cortes com base em `variable_expenses` e `shadow_expenses`.
 
 ---
 
-### DIA 11 - Estudar Negociação
+### DIA 7 - Calendario de Vencimentos
 
-**Objetivo**: Aprender a negociar.
+Objetivo humano: ordem e previsibilidade.
 
-**Funcionalidades**:
-- Exibir materiais (vídeos, textos)
-- Editor de scripts
-- Simulador de conversa (opcional)
+O que implementar:
+- Calendario interativo com vencimentos (fixas + dividas).
+- Cores por prioridade (critico/negociar).
+
+O que ajustar:
+- Gerar `calendar_items` a partir de `fixed_expenses` e `debts`.
+- Criar componente customizado do Dia 7.
+
+Como deve ficar:
+- Agenda clara com vencimentos e prioridades.
+
+IA:
+- (Opcional) sugerir renegociacao de itens criticos.
+
+Plano de ajuste (refatoracao Dia 7):
+- Diagnostico do atual vs. spec (`docs/app_fire_reescrito.md`): hoje ha 3 passos, sem categorias, prioridade, recorrencia, meios de pagamento, nem alinhamento com renda; lembretes estao globais e pouco claros.
+- Fluxo alvo (4 passos simples):
+  1) Pre-carregar e revisar obrigacoes (fixas + dividas + cartoes + vazamentos mantidos).
+  2) Adicionar faltantes (com campos completos).
+  3) Alinhar com datas de renda (alerta de deficit por dia).
+  4) Lembretes + resumo + concluir dia.
+- Modelo de dados minimo:
+  - Expandir `calendar_items` com `category`, `payment_method`, `priority`, `recurrence`, `notes`, `source_type`.
+  - Adicionar `calendar_reminders` (ou `reminders` JSON no item) para guardar lembretes.
+- Pre-carregamento:
+  - Dia 2: `fixed_expenses`.
+  - Dia 5: `card_invoices` e `card_installments` (se existir tabela).
+  - Dia 6: itens mantidos em `leakage_items`/`cuts`.
+  - Dividas/parcelas: `debts` e acordos (se houver).
+- UI limpa e consistente:
+  - Tabela com colunas fixas (Dia, Conta, Valor, Categoria, Pagamento, Prioridade, Acoes).
+  - Rodape unico por passo: Voltar + Continuar; no ultimo passo, Concluir.
+- Validacao:
+  - Nome/valor/data obrigatorios para continuar.
+  - Concluir so com lista valida.
+- Saida do dia:
+  - Resumo do mes (total, criticas, proximos vencimentos).
+  - Salvar em `calendar_items` e refletir no Dia 8 e Dia 9.
+
+---
+
+### DIA 8 - Fila de Pagamento
+
+Objetivo humano: lider de crise e decisao rapida.
+
+O que implementar:
+- Classificacao impacto x consequencia.
+- Plano A/B/C se houver gap.
+- 3 acoes praticas para hoje.
+
+O que ajustar:
+- `Day8PaymentQueue.tsx`: integrar com dados reais de `calendar_items`.
+- Salvar fila e plano em tabela dedicada (ou `day_progress.form_data`).
+
+Como deve ficar:
+- Plano de acao objetivo e registrado.
+
+IA:
+- Sugerir ordem de pagamento com base no impacto e juros.
+
+---
+
+### DIA 9 - Orcamento Minimo de 30 Dias
+
+Objetivo humano: clareza do minimo necessario.
+
+O que implementar:
+- Consolidar essenciais, variaveis e limites.
+- Teto por categoria e saldo disponivel.
+
+O que ajustar:
+- Definir se Dia 9 e orcamento (app_fire_reescrito) ou ordem de ataque (Manual).
+- Se orcamento: criar componente e tabela `monthly_budget` alinhada ao spec.
+
+Como deve ficar:
+- Orcamento minimo calculado e salvo, base para negociacoes.
+
+IA:
+- Ajustar teto de categorias com base nos dados do Dia 2.
+
+---
+
+### DIA 10 - Mapa de Negociacao
+
+Objetivo humano: preparar propostas com seguranca.
+
+O que implementar:
+- Consolidar dividas prioritarias.
+- Definir objetivos, limites e script.
+- Simulador de proposta.
+
+O que ajustar:
+- Escolher tabela unica (`negotiation_plans` + `sessions` ou `negotiations`).
+- Criar componente customizado do Dia 10.
+
+Como deve ficar:
+- Mapa completo de negociacao por divida.
+
+IA:
+- Gerar script e validar se proposta cabe no orcamento.
+
+---
+
+### DIA 11 - Estudar Negociacao
+
+Objetivo humano: aprendizado e confianca.
+
+O que implementar:
+- Quiz de cenarios + feedback.
+- Registro de simulacoes (opcional).
+
+O que ajustar:
+- Se usar `negotiation_sessions`, registrar resultados aqui.
+
+Como deve ficar:
+- Usuario pronto para falar com credor.
+
+IA:
+- Gerar perguntas/feedbacks personalizados.
 
 ---
 
 ### DIA 12 - Fechar Acordo
 
-**Objetivo**: Executar negociações.
+Objetivo humano: celebracao e clareza contratual.
 
-**CRUD**: `negotiation_sessions` + `agreements`
+O que implementar:
+- Formulario de acordo (valor final, parcelas, data).
+- Atualizar `debts` com novos valores.
+- Insight de economia.
+
+O que ajustar:
+- Persistir em `agreements`.
+- Atualizar `dayEngine` e relatorio.
+
+Como deve ficar:
+- Acordo registrado com prova e celebracao.
+
+IA:
+- Validar se o acordo e sustentavel.
 
 ---
 
 ### DIA 13 - Novas Regras de Vida
 
-**Objetivo**: Criar hábitos sustentáveis.
+Objetivo humano: autonomia e proposito.
 
-**Salvar em**:
-- `card_policy` (regras de cartão)
-- `emergency_fund` (caixinha)
-- `weekly_ritual` (rotina)
+O que implementar:
+- Criar 3 regras pessoais.
+- Transformar em mantra visual.
+
+O que ajustar:
+- Persistir regras (tabela `decision_rules` ou `life_rules`).
+- Relatorio do Dia 13.
+
+Como deve ficar:
+- Regras claras e revisitaveis.
+
+IA:
+- Reescrever regras em formato de mantra.
 
 ---
 
 ### DIA 14 - Plano 30/90
 
-**Objetivo**: Plano integrado.
+Objetivo humano: mapa de futuro e modo de operacao.
 
-**CRUD**: `plans` + relações
-- `plan_essentials`
-- `plan_debt_priorities`
-- `plan_levers`
+O que implementar:
+- Metas 30/90 com base no saldo e dividas.
+- Modo (Emergencia, Equilibrar, Tracao).
+
+O que ajustar:
+- Persistir em `plan_306090` (ou tabela unica definida).
+- Integrar com `financial_snapshot`.
+
+Como deve ficar:
+- Plano acionavel para 30 e 90 dias.
+
+IA:
+- Sugerir modo e metas realistas.
 
 ---
 
 ### DIA 15 - Formatura
 
-**Objetivo**: Protocolo semanal + painel de progresso.
+Objetivo humano: orgulho, gratidao e continuidade.
 
-**Salvar em**:
-- `weekly_protocol`
-- `decision_rules`
-- `progress_dashboard`
+O que implementar:
+- Retrospectiva visual (Termometro Dia 1 vs Dia 15).
+- Certificado e protocolo semanal.
 
-**Output**: Certificado de conclusão
+O que ajustar:
+- Gerar grafico com `daily_log`.
+- Mostrar `main_goal` do Dia 1.
 
----
+Como deve ficar:
+- Encerramento com reforco emocional e proximo passo.
 
-## 4. HOOKS A CRIAR
-
-| Hook | Tabela | Arquivo |
-|------|--------|---------|
-| `useIncomeItems` | `income_items` | `src/hooks/useIncomeItems.ts` |
-| `useFixedExpenses` | `fixed_expenses` | `src/hooks/useFixedExpenses.ts` |
-| `useVariableExpenses` | `variable_expenses` | `src/hooks/useVariableExpenses.ts` |
-| `useTransactions` | `transactions` | `src/hooks/useTransactions.ts` |
-| `useShadowExpenses` | `shadow_expenses` | `src/hooks/useShadowExpenses.ts` |
-| `useNegotiationPlans` | `negotiation_plans` | `src/hooks/useNegotiationPlans.ts` |
-| `useNegotiationSessions` | `negotiation_sessions` | `src/hooks/useNegotiationSessions.ts` |
-| `useAgreements` | `agreements` | `src/hooks/useAgreements.ts` |
-| `usePlans` | `plans` + relações | `src/hooks/usePlans.ts` |
-| `useEmergencyFund` | `emergency_fund` | `src/hooks/useEmergencyFund.ts` |
-| `useWeeklyProtocol` | `weekly_protocol` | `src/hooks/useWeeklyProtocol.ts` |
-| `useDecisionRules` | `decision_rules` | `src/hooks/useDecisionRules.ts` |
-| `useProgressDashboard` | `progress_dashboard` | `src/hooks/useProgressDashboard.ts` |
-| `useDayProgress` | `day_progress` | `src/hooks/useDayProgress.ts` |
+IA:
+- Mensagem final personalizada (sem julgamento).
 
 ---
 
-## 5. EDGE FUNCTIONS
+## 7. IA no projeto
 
-### 5.1 `complete-day`
+### 7.1 Arquitetura
+- Edge Functions (Supabase) para evitar expor chave no front.
+- Funcoes sugeridas: `ai-insights`, `ai-categorize`, `ai-negotiation`, `ai-plan`.
+- Log em tabela `ai_insights` (user_id, day_id, input, output, model, created_at).
 
-```
-POST /functions/v1/complete-day
-Body: { dayId, formData, mood, tasks }
-Response: { motivationPhrase, reward, pdfUrl }
-```
+### 7.2 Guardrails
+- Nunca julgar, nunca culpar.
+- Sempre validar esforco e oferecer alternativas.
+- Fallback deterministico se IA falhar.
 
-### 5.2 `generate-day-pdf`
-
-Gera PDF com resumo do dia usando template HTML.
-
----
-
-## 6. COMPONENTES DE UI
-
-| Componente | Dia | Descrição |
-|------------|-----|-----------|
-| `Day1Form.tsx` | 1 | Formulário 12 perguntas + termômetro |
-| `Day2Stepper.tsx` | 2 | Stepper entradas/saídas/dívidas |
-| `Day3TransactionTable.tsx` | 3 | Tabela categorizável |
-| `Day4PauseRule.tsx` | 4 | Congelamento + gatilhos |
-| `Day5CardControl.tsx` | 5 | Faturas e regras |
-| `Day6ShadowExpenses.tsx` | 6 | Lista cut/pause/keep |
-| `Day7Calendar.tsx` | 7 | Calendário vencimentos |
-| `Day8PriorityMatrix.tsx` | 8 | Drag-and-drop prioridades |
-| `Day9BudgetBuilder.tsx` | 9 | Calculadora orçamento |
-| `Day10NegotiationMap.tsx` | 10 | Lista planos |
-| `Day11StudyMaterials.tsx` | 11 | Vídeos + scripts |
-| `Day12AgreementForm.tsx` | 12 | Formulário acordos |
-| `Day13LifeRules.tsx` | 13 | Cards regras |
-| `Day14Plan3090.tsx` | 14 | Stepper 5 passos |
-| `Day15Graduation.tsx` | 15 | Protocolo + certificado |
+### 7.3 Uso por dia
+- Dia 3: gatilhos e padroes.
+- Dia 8: ordem de pagamento.
+- Dia 10: scripts e validacao de proposta.
+- Dia 14: modo e metas 30/90.
+- Dia 15: mensagem final personalizada.
 
 ---
 
-## 7. ROTEIRO DE EXECUÇÃO
+## 8. Conteudo e carga da tabela `days`
 
-### Fase 1: Banco de Dados (1-2 dias)
-1. [ ] Criar todas as migrações SQL
-2. [ ] Executar migrações no Supabase
-3. [ ] Adicionar RLS policies
-4. [ ] Testar tabelas via SQL Editor
-
-### Fase 2: Hooks (1-2 dias)
-1. [ ] Criar todos os hooks listados
-2. [ ] Testar CRUD básico
-
-### Fase 3: Atualizar dayEngine (1 dia)
-1. [ ] Alinhar títulos com estrutura_curso.md
-2. [ ] Adicionar campos de motivação/recompensa
-
-### Fase 4: Componentes por Dia (5-7 dias)
-1. [ ] Implementar Day1Form até Day15Graduation
-2. [ ] Integrar com DayModal
-
-### Fase 5: Edge Functions (2-3 dias)
-1. [ ] Implementar complete-day
-2. [ ] Implementar generate-day-pdf
-3. [ ] Testar geração de PDF
-
-### Fase 6: Migrar Progresso (1 dia)
-1. [ ] Refatorar UserProgressContext para usar Supabase
-2. [ ] Migrar dados existentes
-
-### Fase 7: Testes e Deploy (2-3 dias)
-1. [ ] Testar fluxo completo dia a dia
-2. [ ] Corrigir bugs
-3. [ ] Deploy
-
-**Total estimado: 15-20 dias de desenvolvimento**
+- Mapear cada dia do `app_fire_reescrito` para colunas: `morning_message`, `concept`, `task_steps`, `reflection_questions`, `commitment`, `next_day_preview`.
+- Validar tom de voz usando Manual de Alma.
+- Criar script ou planilha de seed para atualizar `days`.
 
 ---
 
-## 8. PRIORIDADE DE IMPLEMENTAÇÃO
+## 9. QA e criterios de aceite
 
-1. **CRÍTICO**: Migrações SQL + `day_progress`
-2. **ALTO**: Componentes Dias 1-5 (Fase Dossie)
-3. **MÉDIO**: Componentes Dias 6-9 (Fase Contenção)
-4. **MÉDIO**: Componentes Dias 10-12 (Fase Acordos)
-5. **BAIXO**: Componentes Dias 13-15 (Fase Motor)
-6. **BAIXO**: Edge Functions de PDF
+- Dia 1: persistir em 3 tabelas + day_progress, validacoes ok.
+- Dia 2: snapshot consistente com graficos.
+- Progressao: Dia N+1 apenas apos Dia N.
+- Conteudo textual igual ao `app_fire_reescrito`.
+- IA: respostas empaticas e sem julgamento.
 
 ---
 
-## 9. OBSERVAÇÕES FINAIS
+## 10. Decisoes tomadas (Fase 0)
 
-1. **infra.md** e **infra 2.md** estão alinhados com este plano
-2. A estrutura de `dayEngine.ts` precisa ser completamente refeita
-3. Priorizar sincronização com Supabase sobre localStorage
-4. Cada dia deve ter motivação + recompensa conforme regra global
-5. PDFs são secundários - foco primeiro no fluxo funcional
+1) Dia 9 segue `app_fire_reescrito`: Orcamento Minimo de 30 Dias.
+2) Schema de negociacoes oficial: `negotiation_plans` + `negotiation_sessions` + `agreements`.
+3) IA com Google + OpenAI, limite global em R$ definido no painel admin.
+4) Integracao Open Banking (Pluggy/Belvo) fica opcional; CSV/OFX como fallback.
+
+---
+
+## 11. Checklist de execucao
+
+- [ ] Popular conteudo dos dias (tabela `days`)
+- [x] Desativar `DayPage` e manter fluxo unico (DayRedirect)
+- [ ] Refatorar Dia 1 e 2 (persistencia completa)
+- [ ] Implementar Dias 3-6
+- [ ] Implementar Dias 7-9
+- [ ] Implementar Dias 10-12
+- [ ] Implementar Dias 13-15
+- [ ] Implementar IA e logs
+- [ ] QA completo do fluxo
+
+---
+
+## 12. Plano de execucao (ordem e status)
+
+### Bloco 1 - Fluxo e conteudo (prioridade alta)
+- [x] Fluxo unico por `ChallengePath` (DayRedirect ativo)
+- [ ] Seed/atualizacao de conteudo da tabela `days`
+- [ ] Consolidar relatorios por dia em `DayCompletedTab` + `ReportRenderer`
+
+### Bloco 2 - Dias 7-9 (prioridade alta)
+- [x] Dia 7 calendario financeiro (pre-carregar + salvar em `calendar_items`)
+- [x] Dia 8 integrar `calendar_items` na fila de pagamento
+- [x] Dia 9 componente de orcamento minimo com prefill (Dia 2 + Dia 7)
+
+### Bloco 3 - Dias 1-2 (prioridade alta)
+- [x] Persistencia em `initial_assessment`, `daily_log`, `user_commitment`
+- [ ] Insight cards e validacoes finais alinhadas ao tom
+- [ ] Refino de relatorios (Dia 1/2) e metricas completas
+
+### Bloco 4 - Dias 3-6 (prioridade media)
+- [ ] Importacao de extratos (CSV/OFX) + `transactions`
+- [ ] Gatilhos e gastos sombra (Dia 3)
+- [ ] Contrato de regras (Dia 4)
+- [ ] Politica do cartao (Dia 5)
+- [ ] Cortes rapidos (Dia 6)
+
+### Bloco 5 - Dias 10-15 (prioridade media)
+- [x] Dia 10 mapa de negociacao (componente customizado)
+- [x] Dia 11 quiz de negociacao
+- [x] Dia 12 registro de acordo
+- [x] Dia 13 novas regras de vida (mantra + 3 regras)
+- [ ] Regras de vida + plano 30/90 + formatura
+
+### Bloco 6 - IA (paralela)
+- [x] Limite global de IA no admin (R$)
+- [ ] Edge Functions + logs (`ai_insights`)
+- [ ] Integracoes por dia (3, 8, 10, 14, 15)

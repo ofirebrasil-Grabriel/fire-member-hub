@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useDays } from '@/hooks/useDays';
 import { ChallengeTrack } from '@/components/challenge/ChallengeTrack';
 import { LUCIDE_ICON_MAP, type LucideIconName } from '@/components/icons/lucideIconMap';
+import { TransformationDashboard } from '@/components/dashboard';
 
 const ChallengePath = () => {
   const { progress, canAccessDay, getCompletedDaysCount, completeDay } = useUserProgress();
@@ -226,6 +227,9 @@ const ChallengePath = () => {
             Siga o caminho e acompanhe seu progresso real.
           </p>
         </div>
+
+        {/* Dashboard de Transformação */}
+        <TransformationDashboard className="max-w-2xl mx-auto" />
 
         <div className="justify-center items-center space-y-5 md:px-2">
           <ChallengeTrack

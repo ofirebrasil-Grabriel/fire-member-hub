@@ -70,6 +70,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
     }
 
     setPayload({});
+    setIsEditing(false);
   }, [config, open, dayId, user?.id, progress.daysProgress]);
 
   useEffect(() => {
@@ -126,6 +127,23 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
     await handleCompleteDay(payload);
   };
 
+  const handleNextTask = () => {
+    if (panel === 'conteudo') {
+      setPanel('tarefa');
+      return;
+    }
+    if (panel === 'tarefa') {
+      setIsEditing(false);
+      setPanel('concluido');
+      return;
+    }
+    if (isEditing) {
+      setIsEditing(false);
+      return;
+    }
+    onOpenChange(false);
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -145,7 +163,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="fixed inset-0 z-50 flex items-center justify-center sm:p-4"
           >
-            <div className="modal-content flex h-full flex-col sm:h-auto">
+            <div className="modal-content flex h-auto flex-col sm:h-auto">
               <div className="sticky top-0 z-10 shrink-0 space-y-2 border-b border-border/50 bg-popover/95 p-3 backdrop-blur-sm sm:rounded-t-2xl sm:p-4">
                 <div className="flex items-start justify-between gap-2 sm:gap-4">
                   <div className="flex-1 space-y-1 sm:space-y-2">
@@ -270,12 +288,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
               <DayCelebrationModal
                 isOpen={showCelebration}
                 onClose={() => setShowCelebration(false)}
-                onContinue={() => {
-                  onOpenChange(false);
-                  if (dayId < 15 && onNavigateToNextDay) {
-                    onNavigateToNextDay(dayId + 1);
-                  }
-                }}
+                onContinue={handleNextTask}
                 dayId={dayId}
                 dayTitle={day?.title || config.title}
                 motivationPhrase={day?.motivationPhrase || ''}
@@ -288,6 +301,22 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
                 <div className="sticky bottom-0 border-t border-border/50 bg-popover/95 p-4 backdrop-blur-sm">
                   <Button className="btn-fire w-full sm:w-auto sm:ml-auto sm:block" onClick={handleCrudComplete} disabled={saving}>
                     {saving ? 'Salvando...' : 'Concluir dia'}
+                  </Button>
+                </div>
+              )}
+
+              {isEditing && (
+                <div className="sticky bottom-0 border-t border-border/50 bg-popover/95 p-4 backdrop-blur-sm">
+                  <Button className="btn-fire w-full sm:w-auto sm:ml-auto sm:block" onClick={handleNextTask}>
+                    {dayId < 15 ? 'Proxima tarefa' : 'Concluir desafio'}
+                  </Button>
+                </div>
+              )}
+
+              {panel === 'concluido' && !isEditing && (
+                <div className="sticky bottom-0 border-t border-border/50 bg-popover/95 p-4 backdrop-blur-sm">
+                  <Button className="btn-fire w-full sm:w-auto sm:ml-auto sm:block" onClick={handleNextTask}>
+                    {dayId < 15 ? 'Proxima tarefa' : 'Concluir desafio'}
                   </Button>
                 </div>
               )}

@@ -8,9 +8,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Check, ArrowRight, ArrowLeft, Brain, ShoppingCart,
-    ChevronDown, ChevronUp, Plus, Trash2
+    ChevronDown, ChevronUp, Plus, Trash2, Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Day3TransactionTable from '@/components/day/Day3TransactionTable';
 
 interface Day3TriggerAnalysisProps {
     onComplete: (formData: Record<string, unknown>) => void;
@@ -107,7 +108,8 @@ const FEELINGS_PURCHASE = [
 ];
 
 const Day3TriggerAnalysis: React.FC<Day3TriggerAnalysisProps> = ({ onComplete }) => {
-    const [currentSection, setCurrentSection] = useState<'expenses' | 'large'>('expenses');
+    const [currentSection, setCurrentSection] = useState<'transactions' | 'expenses' | 'large'>('transactions');
+    const [transactionSummary, setTransactionSummary] = useState<Record<string, unknown>>({});
     const [analyses, setAnalyses] = useState<SpendingAnalysis[]>(
         SPENDING_CATEGORIES.map(cat => ({
             id: cat.id,
@@ -230,6 +232,7 @@ const Day3TriggerAnalysis: React.FC<Day3TriggerAnalysisProps> = ({ onComplete })
             largePurchasesCount: stats.largePurchasesCount,
             analyses: analyses.filter(a => a.emotionTrigger),
             largePurchases: largePurchases.filter(p => p.description),
+            transactionSummary,
         });
     };
 
@@ -237,6 +240,14 @@ const Day3TriggerAnalysis: React.FC<Day3TriggerAnalysisProps> = ({ onComplete })
         <div className="space-y-6">
             {/* Section Tabs */}
             <div className="flex gap-2">
+                <Button
+                    variant={currentSection === 'transactions' ? 'default' : 'outline'}
+                    onClick={() => setCurrentSection('transactions')}
+                    className="flex-1"
+                >
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Transacoes
+                </Button>
                 <Button
                     variant={currentSection === 'expenses' ? 'default' : 'outline'}
                     onClick={() => setCurrentSection('expenses')}
@@ -254,6 +265,21 @@ const Day3TriggerAnalysis: React.FC<Day3TriggerAnalysisProps> = ({ onComplete })
                     Compras +R$1000
                 </Button>
             </div>
+
+            {currentSection === 'transactions' && (
+                <div className="space-y-4">
+                    <div className="glass-card p-4">
+                        <h3 className="font-bold text-lg mb-2">📒 Mapeie seus gastos</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Adicione transacoes dos ultimos 90 dias para identificar gastos sombra.
+                        </p>
+                        <Day3TransactionTable
+                            onComplete={(values) => setTransactionSummary(values)}
+                            submitLabel="Salvar transacoes"
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Section 1: Expense Categories Analysis */}
             {currentSection === 'expenses' && (
@@ -565,7 +591,28 @@ const Day3TriggerAnalysis: React.FC<Day3TriggerAnalysisProps> = ({ onComplete })
 
             {/* Navigation */}
             <div className="flex justify-between gap-4">
-                {currentSection === 'large' ? (
+                {currentSection === 'transactions' && (
+                    <>
+                        <div />
+                        <Button onClick={() => setCurrentSection('expenses')}>
+                            Proximo <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </>
+                )}
+
+                {currentSection === 'expenses' && (
+                    <>
+                        <div />
+                        <Button
+                            onClick={() => setCurrentSection('large')}
+                            disabled={stats.analyzed < 3}
+                        >
+                            Proximo <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </>
+                )}
+
+                {currentSection === 'large' && (
                     <>
                         <Button variant="outline" onClick={() => setCurrentSection('expenses')}>
                             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
@@ -576,16 +623,6 @@ const Day3TriggerAnalysis: React.FC<Day3TriggerAnalysisProps> = ({ onComplete })
                             className="flex-1 btn-fire"
                         >
                             <Check className="mr-2 h-4 w-4" /> Concluir Dia 3
-                        </Button>
-                    </>
-                ) : (
-                    <>
-                        <div />
-                        <Button
-                            onClick={() => setCurrentSection('large')}
-                            disabled={stats.analyzed < 3}
-                        >
-                            Próximo <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     </>
                 )}

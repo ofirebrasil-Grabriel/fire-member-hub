@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,9 @@ import {
     Plus, Trash2, DollarSign
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface Day4SpendingRulesProps {
     onComplete: (formData: Record<string, unknown>) => void;
@@ -52,8 +55,10 @@ const EXCEPTION_SUGGESTIONS = [
     { name: '⛽ Combustível', limit: 400 },
 ];
 
-const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete }) => {
+const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete, defaultValues }) => {
+    const { user } = useAuth();
     const [currentSection, setCurrentSection] = useState<'banned' | 'exceptions'>('banned');
+    const [loading, setLoading] = useState(true);
 
     // Banned spending state
     const [bannedList, setBannedList] = useState<BannedSpending[]>([]);
@@ -69,6 +74,107 @@ const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete }) => 
         }))
     );
     const [newException, setNewException] = useState('');
+
+    useEffect(() => {
+        const loadData = async () => {
+            if (!user?.id) return;
+            setLoading(true);
+            try {
+                if (defaultValues && Object.keys(defaultValues).length > 0) {
+                    const storedBanned = (defaultValues.bannedList as BannedSpending[]) || [];
+                    const storedExceptions = (defaultValues.exceptions as AllowedException[]) || [];
+                    if (storedBanned.length > 0) {
+                        setBannedList(
+                            storedBanned.map((item, index) => ({
+                                id: item.id || `ban-${Date.now()}-${index}`,
+                                name: item.name,
+                                reason: item.reason || '',
+                                substitute: item.substitute || '',
+                            }))
+                        );
+                    }
+                    if (storedExceptions.length > 0) {
+                        setExceptions(
+                            storedExceptions.map((item, index) => ({
+                                id: item.id || `exc-${Date.now()}-${index}`,
+                                name: item.name,
+                                limit: Number(item.limit) || 0,
+                                observation: item.observation || '',
+                            }))
+                        );
+                    }
+                    return;
+                }
+
+                const { data: rules, error: rulesError } = await supabase
+                    .from('spending_rules')
+                    .select('banned_list, exceptions')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                if (rulesError) throw rulesError;
+
+                if (rules?.banned_list?.length) {
+                    setBannedList(
+                        rules.banned_list.map((item: BannedSpending, index: number) => ({
+                            id: item.id || `ban-${Date.now()}-${index}`,
+                            name: item.name,
+                            reason: item.reason || '',
+                            substitute: item.substitute || '',
+                        }))
+                    );
+                }
+
+                if (rules?.exceptions?.length) {
+                    setExceptions(
+                        rules.exceptions.map((item: AllowedException, index: number) => ({
+                            id: item.id || `exc-${Date.now()}-${index}`,
+                            name: item.name,
+                            limit: Number(item.limit) || 0,
+                            observation: item.observation || '',
+                        }))
+                    );
+                }
+
+                if (!rules?.banned_list?.length) {
+                    const { data: shadows } = await supabase
+                        .from('shadow_expenses')
+                        .select('name, comment')
+                        .eq('user_id', user.id)
+                        .limit(5);
+
+                    if (shadows && shadows.length > 0) {
+                        setBannedList(
+                            shadows.map((item, index) => ({
+                                id: `ban-shadow-${index}`,
+                                name: item.name,
+                                reason: '',
+                                substitute: item.comment || '',
+                            }))
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar regras', error);
+                const message =
+                    String((error as { message?: string }).message || '') ||
+                    String(error || '');
+                if (message.includes('404') || message.includes('spending_rules')) {
+                    toast({
+                        title: 'Tabela spending_rules nao existe',
+                        description: 'Rode a migration 20260202093000_create_spending_rules.sql no Supabase.',
+                        variant: 'destructive',
+                    });
+                } else {
+                    toast({ title: 'Erro ao carregar regras', variant: 'destructive' });
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [user?.id, defaultValues]);
 
     // Add banned item
     const handleAddBanned = (name?: string) => {
@@ -140,7 +246,7 @@ const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete }) => 
     }, [bannedList, exceptions]);
 
     // Can complete
-    const canComplete = bannedList.length >= 3;
+    const canComplete = bannedList.length >= 3 && stats.exceptionsCount >= 1;
 
     // Handle complete
     const handleComplete = () => {
@@ -163,6 +269,16 @@ const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete }) => 
 
     return (
         <div className="space-y-6">
+            <Card className="glass-card border-primary/10">
+                <CardContent className="p-4 text-sm text-muted-foreground">
+                    Regra da pausa: criar limites reais para proteger o seu futuro sem culpa.
+                </CardContent>
+            </Card>
+
+            {loading && (
+                <div className="text-sm text-muted-foreground">Carregando regras...</div>
+            )}
+
             {/* Section Tabs */}
             <div className="flex gap-2">
                 <Button
@@ -401,6 +517,12 @@ const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete }) => 
                             Este é o mínimo que você precisa para sobreviver no mês
                         </p>
                     </div>
+
+                    {stats.exceptionsCount === 0 && (
+                        <div className="p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 text-sm text-yellow-700">
+                            Inclua pelo menos uma excecao essencial com limite para nao ficar sem itens basicos.
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,9 @@ import {
     RefreshCw, TrendingDown, Pause, Gift, Target, DollarSign, Plus, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface Day6QuickCutsProps {
     onComplete: (formData: Record<string, unknown>) => void;
@@ -77,8 +80,10 @@ const EMOTIONAL_REWARDS = [
     'Mais tranquilidade',
 ];
 
-const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete }) => {
+const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete, defaultValues }) => {
+    const { user } = useAuth();
     const [step, setStep] = useState<1 | 2>(1);
+    const [loading, setLoading] = useState(true);
 
     // Step 1: Cuts list
     const [cuts, setCuts] = useState<CutItem[]>([]);
@@ -90,6 +95,114 @@ const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete }) => {
     // Step 2: Rewards
     const [selectedEmotionalRewards, setSelectedEmotionalRewards] = useState<string[]>([]);
     const [bigGoal, setBigGoal] = useState('');
+
+    const actionLabelToValue = useMemo(
+        () =>
+            ACTION_TYPES.reduce<Record<string, string>>((acc, action) => {
+                acc[action.label.toLowerCase()] = action.value;
+                return acc;
+            }, {}),
+        []
+    );
+
+    useEffect(() => {
+        const loadData = async () => {
+            if (!user?.id) {
+                setLoading(false);
+                return;
+            }
+            setLoading(true);
+            try {
+                if (defaultValues && Object.keys(defaultValues).length > 0) {
+                    const storedCuts = (defaultValues.cuts as Array<Record<string, unknown>>) || [];
+                    if (storedCuts.length > 0) {
+                        const mappedCuts = storedCuts.map((cut, index) => {
+                            const categoryLabel = String(cut.category || 'Corte');
+                            const actionLabel = String(cut.actionType || cut.actionLabel || '');
+                            const actionType =
+                                String(cut.actionType || '').trim() ||
+                                actionLabelToValue[actionLabel.toLowerCase()] ||
+                                '';
+                            const matchedCategory = LEAK_CATEGORIES.find(
+                                (cat) => cat.label.toLowerCase() === categoryLabel.toLowerCase()
+                            );
+
+                            return {
+                                id: `cut-${Date.now()}-${index}`,
+                                category: matchedCategory?.value || 'custom',
+                                categoryLabel,
+                                actionType,
+                                actionLabel: actionLabel || (ACTION_TYPES.find((a) => a.value === actionType)?.label || ''),
+                                specificCut: String(cut.specificCut || ''),
+                                clearLimit: String(cut.clearLimit || ''),
+                                limitValue: Number(cut.limitValue || 0),
+                            } as CutItem;
+                        });
+                        setCuts(mappedCuts);
+                        setSelectedEmotionalRewards(
+                            Array.isArray(defaultValues.emotionalRewards)
+                                ? (defaultValues.emotionalRewards as string[])
+                                : []
+                        );
+                        setBigGoal(String(defaultValues.bigGoal || ''));
+                        setCurrentCutId(mappedCuts[0]?.id || null);
+                    }
+                    setLoading(false);
+                    return;
+                }
+
+                const { data: cutsData } = await supabase
+                    .from('cuts')
+                    .select('id, item, category, estimated_value')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: true });
+
+                if (cutsData && cutsData.length > 0) {
+                    const mappedCuts = cutsData.map((cut, index) => ({
+                        id: `cut-db-${cut.id}`,
+                        category: 'custom',
+                        categoryLabel: cut.category || 'Corte',
+                        actionType: '',
+                        actionLabel: '',
+                        specificCut: cut.item || '',
+                        clearLimit: '',
+                        limitValue: Number(cut.estimated_value || 0),
+                    }));
+                    setCuts(mappedCuts);
+                    setCurrentCutId(mappedCuts[0]?.id || null);
+                    return;
+                }
+
+                const { data: shadows } = await supabase
+                    .from('shadow_expenses')
+                    .select('name, comment')
+                    .eq('user_id', user.id)
+                    .limit(5);
+
+                if (shadows && shadows.length > 0) {
+                    const mappedCuts = shadows.map((item, index) => ({
+                        id: `cut-shadow-${index}`,
+                        category: 'custom',
+                        categoryLabel: item.name,
+                        actionType: '',
+                        actionLabel: '',
+                        specificCut: item.comment || '',
+                        clearLimit: '',
+                        limitValue: 0,
+                    }));
+                    setCuts(mappedCuts);
+                    setCurrentCutId(mappedCuts[0]?.id || null);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar cortes', error);
+                toast({ title: 'Erro ao carregar cortes', variant: 'destructive' });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [user?.id, defaultValues, actionLabelToValue]);
 
     // Get current cut being edited
     const currentCut = cuts.find(c => c.id === currentCutId);
@@ -188,7 +301,7 @@ const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete }) => {
     }, [cuts]);
 
     // Validation
-    const canProceedStep1 = cuts.length >= 1 && cuts.every(c => c.actionType && c.specificCut && c.clearLimit);
+    const canProceedStep1 = cuts.length >= 1 && stats.completedCuts >= 1;
     const canComplete = selectedEmotionalRewards.length > 0 || !!bigGoal;
 
     // Handle complete
@@ -197,7 +310,9 @@ const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete }) => {
             cutsCount: stats.cutsCount,
             cuts: cuts.map(c => ({
                 category: c.categoryLabel,
-                actionType: c.actionLabel,
+                categoryValue: c.category,
+                actionType: c.actionType,
+                actionLabel: c.actionLabel || ACTION_TYPES.find(a => a.value === c.actionType)?.label || '',
                 specificCut: c.specificCut,
                 clearLimit: c.clearLimit,
                 limitValue: c.limitValue,
@@ -210,6 +325,16 @@ const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete }) => {
 
     return (
         <div className="space-y-6">
+            <Card className="glass-card border-primary/10">
+                <CardContent className="p-4 text-sm text-muted-foreground">
+                    Cortes pequenos geram alivio rapido. Foque no que da folego esta semana.
+                </CardContent>
+            </Card>
+
+            {loading && (
+                <div className="text-sm text-muted-foreground">Carregando cortes...</div>
+            )}
+
             {/* Progress */}
             <div className="flex gap-1">
                 {[1, 2].map(s => (
@@ -316,7 +441,7 @@ const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete }) => {
                                                                             ? action.color === 'blue' ? "bg-blue-500 text-white"
                                                                                 : action.color === 'orange' ? "bg-orange-500 text-white"
                                                                                     : "bg-red-500 text-white"
-                                                                            : "bg-muted hover:bg-muted/80"
+                                                                            : "glass-card hover:bg-muted/80"
                                                                     )}
                                                                 >
                                                                     <Icon className="h-3 w-3" /> {action.label}
@@ -391,7 +516,9 @@ const Day6QuickCuts: React.FC<Day6QuickCutsProps> = ({ onComplete }) => {
 
                                         {currentCutId !== cut.id && cut.actionType && (
                                             <p className="text-xs text-muted-foreground">
-                                                {cut.actionLabel} - {cut.specificCut.substring(0, 50)}...
+                                                {(cut.actionLabel || ACTION_TYPES.find(a => a.value === cut.actionType)?.label || '')}
+                                                {' - '}
+                                                {cut.specificCut.substring(0, 50)}...
                                             </p>
                                         )}
                                     </CardContent>

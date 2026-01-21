@@ -918,7 +918,7 @@ Campos por dívida:
 **Arqueologia Financeira: Investigue Seus Padrões de Gasto e Descubra Vazamentos**
 
 ### 🌅 Mensagem Matinal
-Muitas vezes reclamamos de contas que "aparecem do nada", mas elas são resultado de escolhas repetidas. Fazer uma arqueologia financeira — vasculhar suas transações dos últimos 90 dias — é como olhar fotos antigas: no começo dá vergonha, mas logo enxergamos histórias, vícios e oportunidades de melhoria. O objetivo não é julgar, e sim aprender. Ao final deste dia você terá clareza sobre os maiores drenos do seu orçamento e os comportamentos que mais impactam suas finanças.
+Muitas vezes reclamamos de contas que "aparecem do nada", mas elas são resultado de escolhas repetidas. Fazer uma arqueologia financeira — vasculhar suas transações dos últimos 90 dias  é como olhar fotos antigas: no começo dá vergonha, mas logo enxergamos histórias, vícios e oportunidades de melhoria. O objetivo não é julgar, e sim aprender. Ao final deste dia você terá clareza sobre os maiores drenos do seu orçamento e os comportamentos que mais impactam suas finanças.
 
 ### 📚 Conceito FIRE do Dia
 **Histórico é professor.** O movimento FIRE destaca que seus números de hoje refletem escolhas passadas. Olhar os últimos três meses ajuda a identificar 20% das despesas responsáveis por 80% dos problemas (princípio de Pareto). Também ajuda a perceber gastos sazonais ou esporádicos (festas, consertos, presentes) e a ajustar a projeção do orçamento mínimo. Ao compreender os padrões, fica mais fácil fazer cortes conscientes e evitar recaídas.
