@@ -167,14 +167,14 @@ const Day8PaymentQueue: React.FC<Day8PaymentQueueProps> = ({ onComplete, default
         if (Array.isArray(values.actions)) {
             const mappedActions = (values.actions as Array<Record<string, unknown>>).map((action, index) => ({
                 id: String(index + 1),
-                type: normalizeActionType(String(action.type || action.label || '')),
+                type: normalizeActionType(String(action.type || action.label || '')) as ActionItem['type'],
                 description: String(action.description || ''),
                 completed: false,
             }));
-            const fallback = [
-                { id: '1', type: 'protection' as const, description: '', completed: false },
-                { id: '2', type: 'risk_reduction' as const, description: '', completed: false },
-                { id: '3', type: 'cut' as const, description: '', completed: false },
+            const fallback: ActionItem[] = [
+                { id: '1', type: 'protection', description: '', completed: false },
+                { id: '2', type: 'risk_reduction', description: '', completed: false },
+                { id: '3', type: 'cut', description: '', completed: false },
             ];
             setActions(
                 fallback.map((item, index) => mappedActions[index] || item)

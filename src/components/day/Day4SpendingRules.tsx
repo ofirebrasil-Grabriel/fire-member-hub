@@ -114,9 +114,10 @@ const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete, defau
 
                 if (rulesError) throw rulesError;
 
-                if (rules?.banned_list?.length) {
+                const bannedListData = rules?.banned_list as unknown as BannedSpending[] | null;
+                if (bannedListData && Array.isArray(bannedListData) && bannedListData.length) {
                     setBannedList(
-                        rules.banned_list.map((item: BannedSpending, index: number) => ({
+                        bannedListData.map((item: BannedSpending, index: number) => ({
                             id: item.id || `ban-${Date.now()}-${index}`,
                             name: item.name,
                             reason: item.reason || '',
@@ -125,9 +126,10 @@ const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete, defau
                     );
                 }
 
-                if (rules?.exceptions?.length) {
+                const exceptionsData = rules?.exceptions as unknown as AllowedException[] | null;
+                if (exceptionsData && Array.isArray(exceptionsData) && exceptionsData.length) {
                     setExceptions(
-                        rules.exceptions.map((item: AllowedException, index: number) => ({
+                        exceptionsData.map((item: AllowedException, index: number) => ({
                             id: item.id || `exc-${Date.now()}-${index}`,
                             name: item.name,
                             limit: Number(item.limit) || 0,
@@ -136,7 +138,7 @@ const Day4SpendingRules: React.FC<Day4SpendingRulesProps> = ({ onComplete, defau
                     );
                 }
 
-                if (!rules?.banned_list?.length) {
+                if (!bannedListData || !bannedListData.length) {
                     const { data: shadows } = await supabase
                         .from('shadow_expenses')
                         .select('name, comment')
