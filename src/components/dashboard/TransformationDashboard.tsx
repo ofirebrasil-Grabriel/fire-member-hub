@@ -53,9 +53,12 @@ export default function TransformationDashboard({ className }: TransformationDas
         let latestBreathe = initialBreathe;
         for (let i = 15; i >= 1; i--) {
             const dayData = progress.daysProgress[i]?.form_data as Record<string, unknown> | undefined;
-            if (dayData?.breathe_score) {
-                latestBreathe = Number(dayData.breathe_score);
-                break;
+            if (dayData && Object.prototype.hasOwnProperty.call(dayData, 'breathe_score')) {
+                const value = Number(dayData.breathe_score);
+                if (!Number.isNaN(value)) {
+                    latestBreathe = value;
+                    break;
+                }
             }
         }
 
@@ -98,7 +101,7 @@ export default function TransformationDashboard({ className }: TransformationDas
             className={cn("space-y-4", className)}
         >
             {/* Card Principal: Jornada */}
-            <Card className="glass-card border-primary/20 overflow-hidden">
+            <Card className="glass-card border-primary/20 overflow-hidden mx-auto">
                 <CardHeader className="pb-2 bg-gradient-to-r from-primary/10 to-transparent">
                     <CardTitle className="text-lg flex items-center gap-2">
                         🔥 Sua Jornada de Transformação
@@ -124,14 +127,14 @@ export default function TransformationDashboard({ className }: TransformationDas
                     </div>
 
                     {/* Timeline visual simplificada */}
-                    <div className="flex items-center justify-between py-2">
+                    <div className="w-full py-2 flex justify-center">
                         {TRANSFORMATION_PHASES.map((phase, idx) => {
                             const isActive = phase === metrics.phase;
                             const isCompleted = metrics.currentDay > Math.max(...phase.days);
                             return (
-                                <div key={phase.phase} className="flex items-center">
+                                <div key={phase.phase} className="flex  items-center">
                                     <div className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center text-sm",
+                                        "w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0",
                                         isCompleted && "bg-green-500 text-white",
                                         isActive && "bg-primary text-white ring-2 ring-primary/50",
                                         !isCompleted && !isActive && "bg-muted text-muted-foreground"
@@ -205,46 +208,6 @@ export default function TransformationDashboard({ className }: TransformationDas
                                 🎉 Você melhorou {metrics.breatheChange} pontos! Continue assim!
                             </p>
                         )}
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Métricas Financeiras (se Dia 2 completo) */}
-            {metrics.totalIncome > 0 && (
-                <Card className="glass-card border-primary/10">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Wallet className="h-4 w-4 text-primary" />
-                            Seu Raio-X Financeiro
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                                <p className="text-xs text-muted-foreground">Renda mensal</p>
-                                <p className="text-lg font-bold text-green-500">{formatCurrency(metrics.totalIncome)}</p>
-                            </div>
-                            <div className={cn(
-                                "p-3 rounded-lg border",
-                                metrics.balance >= 0
-                                    ? "bg-green-500/10 border-green-500/20"
-                                    : "bg-red-500/10 border-red-500/20"
-                            )}>
-                                <p className="text-xs text-muted-foreground">Balanço mensal</p>
-                                <p className={cn(
-                                    "text-lg font-bold",
-                                    metrics.balance >= 0 ? "text-green-500" : "text-red-500"
-                                )}>
-                                    {metrics.balance >= 0 ? '+' : ''}{formatCurrency(metrics.balance)}
-                                </p>
-                            </div>
-                            {metrics.totalDebt > 0 && (
-                                <div className="col-span-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                    <p className="text-xs text-muted-foreground">Dívidas mapeadas</p>
-                                    <p className="text-lg font-bold text-red-500">{formatCurrency(metrics.totalDebt)}</p>
-                                </div>
-                            )}
-                        </div>
                     </CardContent>
                 </Card>
             )}

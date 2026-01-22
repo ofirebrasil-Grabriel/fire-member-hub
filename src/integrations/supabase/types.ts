@@ -1340,6 +1340,51 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_day_reports: {
+        Row: {
+          analysis_json: Json | null
+          analysis_text: string | null
+          cost_brl: number | null
+          created_at: string | null
+          day_id: number
+          id: string
+          model: string | null
+          prompt_version: string | null
+          provider: string | null
+          tokens_total: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis_json?: Json | null
+          analysis_text?: string | null
+          cost_brl?: number | null
+          created_at?: string | null
+          day_id: number
+          id?: string
+          model?: string | null
+          prompt_version?: string | null
+          provider?: string | null
+          tokens_total?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis_json?: Json | null
+          analysis_text?: string | null
+          cost_brl?: number | null
+          created_at?: string | null
+          day_id?: number
+          id?: string
+          model?: string | null
+          prompt_version?: string | null
+          provider?: string | null
+          tokens_total?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       shadow_expenses: {
         Row: {
           action_taken_at: string | null

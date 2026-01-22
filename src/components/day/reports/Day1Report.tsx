@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Printer, Edit, CheckCircle2, Clock, Bell, Target, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
+import AiAnalysisCard from '@/components/day/AiAnalysisCard';
+import { AiDayReportPayload } from '@/lib/aiDayReport';
 
 interface Day1ReportProps {
     formData: Record<string, unknown>;
     completedAt: string;
     onPrint: () => void;
     onEdit: () => void;
+    aiReport: AiDayReportPayload | null;
 }
 
 // Mapas de labels para exibição
@@ -54,6 +57,7 @@ export default function Day1Report({
     completedAt,
     onPrint,
     onEdit,
+    aiReport,
 }: Day1ReportProps) {
     // Extrair dados do formData
     const moneyFeeling = formData.money_feeling as string;
@@ -101,6 +105,10 @@ export default function Day1Report({
                     })}
                 </p>
             </div>
+
+            {aiReport && (
+                <AiAnalysisCard report={aiReport} title="Analise do Dia" />
+            )}
 
             {/* Seção 1: Resumo do Questionário */}
             <Card className="glass-card border-primary/10">

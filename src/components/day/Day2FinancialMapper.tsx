@@ -202,7 +202,7 @@ const Day2FinancialMapper: React.FC<Day2FinancialMapperProps> = ({ onComplete, d
                             .eq('user_id', user.id),
                         supabase
                             .from('debts')
-                            .select('id, creditor, installment_value, total_balance')
+                            .select('id, creditor, installment_value, total_balance, installments_remaining')
                             .eq('user_id', user.id),
                     ]);
 

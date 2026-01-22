@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Printer, Edit, CheckCircle2, TrendingUp, TrendingDown, AlertTriangle, Wallet, CreditCard, BarChart3 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import AiAnalysisCard from '@/components/day/AiAnalysisCard';
+import { AiDayReportPayload } from '@/lib/aiDayReport';
 import {
     PieChart, Pie, Cell, BarChart, Bar,
     XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
@@ -13,6 +15,7 @@ interface Day2ReportProps {
     completedAt: string;
     onPrint: () => void;
     onEdit: () => void;
+    aiReport: AiDayReportPayload | null;
 }
 
 const COLORS = {
@@ -30,6 +33,7 @@ export default function Day2Report({
     completedAt,
     onPrint,
     onEdit,
+    aiReport,
 }: Day2ReportProps) {
     // Extrair dados do formData
     const totalIncome = Number(formData.totalIncome) || 0;
@@ -123,6 +127,10 @@ export default function Day2Report({
                     </p>
                 </CardContent>
             </Card>
+
+            {aiReport && (
+                <AiAnalysisCard report={aiReport} title="Analise do Dia" />
+            )}
 
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Visão geral

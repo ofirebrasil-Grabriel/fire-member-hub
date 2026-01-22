@@ -15,6 +15,7 @@ import { useDay } from '@/hooks/useDays';
 import DayTaskTab from '@/components/day/DayTaskTab';
 import DayCompletedTab from '@/components/day/DayCompletedTab';
 import DayCelebrationModal from '@/components/day/DayCelebrationModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DayModalProps {
   dayId: number;
@@ -90,6 +91,49 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
   const defaultValues = progress.daysProgress[dayId]?.form_data;
   const isCompleted = Boolean(progress.daysProgress[dayId]?.completed);
 
+  const resolveSettingUrl = (value: unknown) => {
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (value && typeof value === 'object' && 'url' in value) {
+      const maybeUrl = (value as { url?: unknown }).url;
+      return typeof maybeUrl === 'string' ? maybeUrl.trim() : '';
+    }
+    return '';
+  };
+
+  const notifyN8nWebhook = async (payload: { dayId: number; userId: string }) => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'n8n_webhook_url')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Erro ao buscar n8n_webhook_url:', error.message);
+        return;
+      }
+
+      const url = resolveSettingUrl(data?.value);
+      if (!url) {
+        return;
+      }
+
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'day_completed',
+          day_id: payload.dayId,
+          user_id: payload.userId,
+        }),
+      });
+    } catch (error) {
+      console.warn('Falha ao disparar webhook do n8n:', error);
+    }
+  };
+
   const handleCompleteDay = async (values: Record<string, unknown>) => {
     if (!user?.id) {
       toast({ title: 'Usuario nao autenticado', variant: 'destructive' });
@@ -103,6 +147,7 @@ export const DayModal = ({ dayId, open, onOpenChange, onCompleted, onNavigateToN
       setPhase('output');
       setPanel('concluido');
       setShowCelebration(true);
+      notifyN8nWebhook({ dayId, userId: user.id });
       onCompleted?.(dayId, values);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro inesperado';

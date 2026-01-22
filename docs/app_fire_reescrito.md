@@ -901,7 +901,7 @@ Campos por dívida:
 3. **Taxa de Utilização de Importação:** % que usa importação de extratos vs preenchimento manual
 4. **Distribuição de Balanço:**
    - % com sobra positiva
-   - % com sobra marginal (0-20% da renda)
+   - % com sobra margem (0-20% da renda)
    - % com déficit (gastando mais que ganha)
 5. **Categorias Mais Comuns:** Top 5 despesas fixas e variáveis mais frequentes
 6. **Taxa de Endividamento:** % de usuários com dívidas vs sem dívidas
@@ -5770,7 +5770,7 @@ Próximo: Dia 10 - Mapa de Negociação
 1. **Taxa de Conclusão:** % que completa Dia 9
 2. **Distribuição de Balanço:**
    - % com sobra positiva
-   - % com sobra marginal (0-10% da renda)
+   - % com sobra margem (0-10% da renda)
    - % com déficit
 3. **Déficit Médio:** Valor médio de déficit entre usuários com déficit
 4. **Taxa de Ajuste:** % que usa o simulador de ajustes para equilibrar orçamento

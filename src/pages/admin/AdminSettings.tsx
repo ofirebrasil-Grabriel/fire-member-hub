@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Settings, Plus, Edit, Trash2, Save, Copy, Check, ExternalLink, Webhook, AlertTriangle } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Save, Copy, Check, ExternalLink, Webhook, AlertTriangle, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -24,8 +26,14 @@ export const AdminSettings = () => {
   const [editingSetting, setEditingSetting] = useState<Setting | null>(null);
   const [formData, setFormData] = useState({ key: '', value: '', description: '' });
   const [aiBudgetInput, setAiBudgetInput] = useState('');
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiProvider, setAiProvider] = useState<'openai' | 'google'>('openai');
+  const [aiModel, setAiModel] = useState('gpt-4o-mini');
 
   const aiBudgetSetting = settings.find((setting) => setting.key === 'ai_budget_brl');
+  const aiEnabledSetting = settings.find((setting) => setting.key === 'ai_enabled');
+  const aiProviderSetting = settings.find((setting) => setting.key === 'ai_provider');
+  const aiModelSetting = settings.find((setting) => setting.key === 'ai_model');
 
   useEffect(() => {
     fetchSettings();
@@ -43,6 +51,23 @@ export const AdminSettings = () => {
         : JSON.stringify(aiBudgetSetting.value);
     setAiBudgetInput(value);
   }, [aiBudgetSetting]);
+
+  useEffect(() => {
+    setAiEnabled(typeof aiEnabledSetting?.value === 'boolean' ? aiEnabledSetting.value : true);
+
+    const providerValue = typeof aiProviderSetting?.value === 'string'
+      ? aiProviderSetting.value
+      : 'openai';
+    setAiProvider(providerValue === 'google' ? 'google' : 'openai');
+
+    const modelValue = typeof aiModelSetting?.value === 'string'
+      ? aiModelSetting.value
+      : providerValue === 'google'
+        ? 'gemini-1.5-flash'
+        : 'gpt-4o-mini';
+    setAiModel(modelValue);
+
+  }, [aiEnabledSetting, aiProviderSetting, aiModelSetting]);
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -163,6 +188,37 @@ export const AdminSettings = () => {
     fetchSettings();
   };
 
+  const upsertSetting = async (key: string, value: Json, description: string) => {
+    const existing = settings.find((setting) => setting.key === key);
+    if (existing) {
+      const { error } = await supabase
+        .from('settings')
+        .update({ value, description, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+      return error;
+    }
+    const { error } = await supabase
+      .from('settings')
+      .insert({ key, value, description });
+    return error;
+  };
+
+  const handleSaveAiConfig = async () => {
+    const errors = await Promise.all([
+      upsertSetting('ai_enabled', aiEnabled, 'Ativa/desativa a IA nos relatorios'),
+      upsertSetting('ai_provider', aiProvider, 'Provider da IA (openai | google)'),
+      upsertSetting('ai_model', aiModel, 'Modelo usado para gerar relatorios'),
+    ]);
+
+    if (errors.some((err) => err)) {
+      toast({ title: 'Erro ao salvar configuracoes de IA', variant: 'destructive' });
+      return;
+    }
+
+    toast({ title: 'Configuracoes de IA atualizadas!' });
+    fetchSettings();
+  };
+
   const hotmartWebhookUrl = 'https://gvjvygukvupjxadevduj.supabase.co/functions/v1/hotmart-webhook';
   const n8nWebhookUrl = 'https://gvjvygukvupjxadevduj.supabase.co/functions/v1/n8n-webhook';
 
@@ -256,6 +312,62 @@ export const AdminSettings = () => {
               Salvar
             </Button>
           </div>
+        </div>
+      </div>
+
+      <div className="glass-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              IA dos Relatórios
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Define o provider, modelo e comportamento da IA no relatorio do dia.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Chaves: configure no Supabase Secrets (OPENAI_API_KEY ou GOOGLE_API_KEY).
+            </p>
+          </div>
+          <Button onClick={handleSaveAiConfig} className="gap-2">
+            <Save className="w-4 h-4" />
+            Salvar IA
+          </Button>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-surface/40 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium">IA ativa</p>
+              <p className="text-xs text-muted-foreground">
+                Desative se quiser usar apenas o relatorio padrao.
+              </p>
+            </div>
+            <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
+          </div>
+
+          <div className="rounded-lg border border-border/60 bg-surface/40 px-4 py-3">
+            <p className="text-sm font-medium mb-2">Provider</p>
+            <Select value={aiProvider} onValueChange={(value) => setAiProvider(value as 'openai' | 'google')}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI</SelectItem>
+                <SelectItem value="google">Google</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-lg border border-border/60 bg-surface/40 px-4 py-3">
+            <p className="text-sm font-medium mb-2">Modelo</p>
+            <Input
+              value={aiModel}
+              onChange={(e) => setAiModel(e.target.value)}
+              placeholder={aiProvider === 'google' ? 'gemini-1.5-flash' : 'gpt-4o-mini'}
+            />
+          </div>
+
         </div>
       </div>
 

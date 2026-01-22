@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Printer, Edit, CheckCircle2 } from 'lucide-react';
@@ -8,6 +8,13 @@ import { generateDayReport } from '@/lib/printReport';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { ReportRenderer } from './reports';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserProgress } from '@/contexts/UserProgressContext';
+import { AiDayReportPayload, formatAiDayReportText } from '@/lib/aiDayReport';
+import { fetchAiDayReportMeta, generateAiDayReport } from '@/services/aiReports';
+import AiAnalysisCard from '@/components/day/AiAnalysisCard';
+import { useDays } from '@/hooks/useDays';
+import { DAY_ENGINE } from '@/config/dayEngine';
 
 interface DayCompletedTabProps {
     dayId: number;
@@ -26,10 +33,88 @@ export default function DayCompletedTab({
     formData,
     onEdit,
 }: DayCompletedTabProps) {
+    const { user } = useAuth();
+    const { progress } = useUserProgress();
+    const { days } = useDays();
+    const [aiReport, setAiReport] = useState<AiDayReportPayload | null>(null);
+    const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'ready' | 'disabled' | 'budget_exceeded' | 'error'>('idle');
+
     const analysis = useMemo(
         () => generateDayAnalysis(dayId, formData),
         [dayId, formData]
     );
+
+    const dayContent = useMemo(
+        () => days.find((day) => day.id === dayId) ?? null,
+        [days, dayId]
+    );
+
+    const dayConfig = useMemo(
+        () => DAY_ENGINE.find((day) => day.id === dayId) ?? null,
+        [dayId]
+    );
+
+    const dayContext = useMemo(
+        () => ({
+            title: dayTitle,
+            subtitle: dayConfig?.subtitle ?? null,
+            objective: dayConfig?.objective ?? null,
+            tips: dayConfig?.tips ?? null,
+            morning_message: dayContent?.morningMessage ?? null,
+            concept_title: dayContent?.conceptTitle ?? null,
+            concept: dayContent?.concept ?? null,
+            task_title: dayContent?.taskTitle ?? null,
+            description: dayContent?.description ?? null,
+        }),
+        [dayTitle, dayConfig?.subtitle, dayConfig?.objective, dayConfig?.tips, dayContent]
+    );
+
+    const formDataSnapshot = useMemo(() => JSON.stringify(formData || {}), [formData]);
+    const metricsSnapshot = useMemo(() => JSON.stringify(metrics || []), [metrics]);
+    const dayContextSnapshot = useMemo(() => JSON.stringify(dayContext || {}), [dayContext]);
+
+    useEffect(() => {
+        if (!user?.id) return;
+        let active = true;
+
+        const loadAiReport = async () => {
+            setAiStatus('loading');
+            const existing = await fetchAiDayReportMeta(user.id, dayId);
+            if (!active) return;
+            if (existing.report) {
+                const completedAtDate = new Date(completedAt);
+                const updatedAtDate = existing.updatedAt ? new Date(existing.updatedAt) : null;
+                if (updatedAtDate && updatedAtDate >= completedAtDate) {
+                    setAiReport(existing.report);
+                    setAiStatus('ready');
+                    return;
+                }
+            }
+
+            const result = await generateAiDayReport({
+                dayId,
+                dayTitle,
+                formData,
+                metrics,
+                userName: progress.userName,
+                dayContext,
+            });
+            if (!active) return;
+            if (result.report) {
+                setAiReport(result.report);
+                setAiStatus('ready');
+            } else {
+                setAiStatus(result.status as typeof aiStatus);
+            }
+        };
+
+        loadAiReport();
+        return () => {
+            active = false;
+        };
+    }, [user?.id, dayId, dayTitle, formDataSnapshot, metricsSnapshot, dayContextSnapshot]);
+
+    const analysisText = aiReport ? formatAiDayReportText(aiReport) : analysis;
 
     const handlePrint = async () => {
         await generateDayReport({
@@ -38,7 +123,7 @@ export default function DayCompletedTab({
             completedAt,
             metrics,
             formData,
-            analysis,
+            analysis: analysisText,
         });
     };
 
@@ -65,6 +150,7 @@ export default function DayCompletedTab({
             metrics={metrics}
             onPrint={handlePrint}
             onEdit={onEdit}
+            aiReport={aiReport}
         />
     );
 
@@ -124,16 +210,26 @@ export default function DayCompletedTab({
             </Card>
 
             {/* Análise do Dia */}
-            <Card className="glass-card border-primary/10">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                        💡 Análise do Dia
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground leading-relaxed">{analysis}</p>
-                </CardContent>
-            </Card>
+            {aiReport ? (
+                <AiAnalysisCard report={aiReport} title="Analise do Dia" />
+            ) : (
+                <Card className="glass-card border-primary/10">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            💡 Análise do Dia
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {aiStatus === 'loading' ? (
+                            <p className="text-muted-foreground leading-relaxed">
+                                Gerando analise personalizada...
+                            </p>
+                        ) : (
+                            <p className="text-muted-foreground leading-relaxed">{analysis}</p>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Ações */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">

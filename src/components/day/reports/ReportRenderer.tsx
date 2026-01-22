@@ -2,6 +2,7 @@ import React from 'react';
 import Day1Report from './Day1Report';
 import Day2Report from './Day2Report';
 import { OutputMetricValue } from '@/services/dayEngine';
+import { AiDayReportPayload } from '@/lib/aiDayReport';
 
 interface ReportRendererProps {
     dayId: number;
@@ -11,6 +12,7 @@ interface ReportRendererProps {
     metrics: OutputMetricValue[];
     onPrint: () => void;
     onEdit: () => void;
+    aiReport: AiDayReportPayload | null;
 }
 
 /**
@@ -25,6 +27,7 @@ export default function ReportRenderer({
     metrics,
     onPrint,
     onEdit,
+    aiReport,
 }: ReportRendererProps) {
     switch (dayId) {
         case 1:
@@ -34,6 +37,7 @@ export default function ReportRenderer({
                     completedAt={completedAt}
                     onPrint={onPrint}
                     onEdit={onEdit}
+                    aiReport={aiReport}
                 />
             );
 
@@ -45,6 +49,7 @@ export default function ReportRenderer({
                     completedAt={completedAt}
                     onPrint={onPrint}
                     onEdit={onEdit}
+                    aiReport={aiReport}
                 />
             );
 
